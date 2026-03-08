@@ -3,8 +3,18 @@ import {
   Search, ShieldCheck, BrainCircuit, Check, X, Send, Clock,
   FileText, Calendar, TerminalSquare, AlertCircle, ChevronDown,
   MessageSquare, Image as ImageIcon, Code, Sparkles, Plus,
-  Paperclip, Mic, Share, User, LayoutDashboard, Database
+  Paperclip, Mic, Share, User, LayoutDashboard, Database, Settings, Trash2, Info, Link
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+
+// Strip Qwen <think>...</think> blocks and PENDING_APPROVAL from content
+const cleanContent = (raw = '') =>
+  raw
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/\*?STATUS:\s*PENDING_APPROVAL\*?/g, '')
+    .trim();
 
 const systemCss = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -128,6 +138,8 @@ const systemCss = `
   }
   .nav-item:hover { background: #f1f5f9; color: var(--text-primary); }
   .nav-item.active { background: white; color: var(--text-primary); box-shadow: var(--shadow-sm); font-weight: 600; }
+  .delete-action:hover { background: #fee2e2; }
+  .delete-action:hover svg { stroke: var(--danger); }
 
   .upgrade-card {
     margin-top: auto;
@@ -394,6 +406,24 @@ const systemCss = `
   .btn-reject:hover { background: #fef2f2; color: var(--danger); border-color: #fecaca; }
   .btn-approve { background: var(--text-primary); color: white; }
   .btn-approve:hover { opacity: 0.9; }
+  /* Styled scrollbars - sidebar and content areas */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+  .telemetry-box::-webkit-scrollbar-thumb { background: #334155; }
+  .telemetry-box::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+  @media (max-width: 1024px) {
+    .execution-pane { display: none; }
+  }
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .top-header { padding: 0 16px; }
+    .hero-title { font-size: 24px; text-align: center; }
+    .starters-grid { grid-template-columns: 1fr; }
+  }
 `;
 
 export default function App() {
@@ -402,6 +432,77 @@ export default function App() {
   const [sessionActive, setSessionActive] = useState(false);
   const [sessionId, setSessionId] = useState(null);
   const [chat, setChat] = useState([]);
+  const [sessionHistory, setSessionHistory] = useState([]);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [availableMcps, setAvailableMcps] = useState([]);
+  const [selectedMcps, setSelectedMcps] = useState([]);
+
+  const fetchAvailableMcps = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/mcp');
+      const data = await res.json();
+      setAvailableMcps(data.configs || []);
+    } catch (e) {
+      console.error("Failed to fetch available MCPs", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchAvailableMcps();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/history');
+      const data = await res.json();
+      console.log("History Fetched:", data.sessions);
+      setSessionHistory(data.sessions || []);
+    } catch (e) {
+      console.error("Failed to load history", e);
+    }
+  };
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistoricalSession = async (id) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/workflow/${id}`);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      setSessionId(data.session_id || data.id);
+      setSessionActive(true);
+      setIsProcessing(data.status === 'ACTIVE');
+      setApprovalPending(data.status === 'PAUSED_FOR_HITL');
+      setWorkflowCompleted(data.status === 'COMPLETED' || data.status === 'FAILED');
+
+      const mappedChat = (data.chat_history || [])
+        .filter(item => item.role === 'user' || item.agent === 'Finalizer' || (!item.role && item.agent))
+        .map((item, idx) => {
+          const isUser = item.role === 'user' || item.agent === 'User';
+          return {
+            id: idx,
+            role: isUser ? 'user' : 'ai',
+            agent: item.agent || (item.role === 'user' ? 'User' : 'Assistant'),
+            content: cleanContent(item.content)
+          };
+        });
+      setChat(mappedChat);
+
+      const mappedLogs = (data.chat_history || []).map(item => ({
+        agent: item.agent,
+        msg: item.content
+      }));
+      setLogs(mappedLogs);
+    } catch (e) {
+      console.error("Failed to load session", e);
+    }
+  };
 
   // Mission Control State
   const [tasks, setTasks] = useState([]);
@@ -409,6 +510,9 @@ export default function App() {
   const [approvalPending, setApprovalPending] = useState(false);
   const [workflowCompleted, setWorkflowCompleted] = useState(false);
   const [toggles, setToggles] = useState({ pageIndex: true, deepResearch: false, humanApproval: true });
+  const [workflowStarted, setWorkflowStarted] = useState(false); // true once a real workflow has been dispatched
+  const [showSettings, setShowSettings] = useState(false);
+
 
   const logsEndRef = useRef(null);
 
@@ -435,6 +539,24 @@ export default function App() {
           }));
           setLogs(mappedLogs);
 
+          const allHistory = data.chat_history || [];
+          // Show: user messages + every Finalizer message
+          // Also show the very last agent message per run if Finalizer didn't respond yet
+          const finalizerMsgs = new Set();
+          const mappedChat = allHistory
+            .filter(item => {
+              if (item.role === 'user') return true;
+              if (item.agent === 'Finalizer') { finalizerMsgs.add(item); return true; }
+              return false;
+            })
+            .map((item, idx) => ({
+              id: idx,
+              role: item.role === 'user' ? 'user' : 'ai',
+              agent: item.agent,
+              content: cleanContent(item.content)
+            }));
+          setChat(mappedChat);
+
           if (data.status === 'PAUSED_FOR_HITL' && !approvalPending && !workflowCompleted) {
             setApprovalPending(true);
             setIsProcessing(false);
@@ -442,13 +564,8 @@ export default function App() {
             setWorkflowCompleted(true);
             setIsProcessing(false);
             setApprovalPending(false);
-
-            // Add the final agent message to the main chat
-            setChat(prev => {
-              const withoutOldAiMsg = prev.filter(m => m.role === 'user');
-              const finalMsgText = data.status === 'COMPLETED' ? "Workflow completed successfully." : "Workflow failed.";
-              return [...withoutOldAiMsg, { id: Date.now(), role: 'ai', content: finalMsgText }];
-            });
+            // Refresh history sidebar when a session finishes
+            loadHistory();
           }
         } catch (e) {
           console.error("Polling error:", e);
@@ -457,6 +574,117 @@ export default function App() {
     }
     return () => clearInterval(interval);
   }, [sessionActive, sessionId, isProcessing, approvalPending, workflowCompleted]);
+
+  // Speech Recognition Setup
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+
+      recognitionRef.current.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(prev => (prev ? prev + ' ' : '') + transcript);
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error("Speech recognition error", event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  };
+
+  const continueWorkflow = async () => {
+    if (!input.trim() || isProcessing) return;
+
+    const currentInput = input;
+    setChat(prev => [...prev, { id: Date.now(), role: 'user', content: currentInput }]);
+    setInput('');
+    setIsProcessing(true);
+    setLogs(prev => [...prev, { agent: 'System', msg: 'Submitting follow-up prompt to existing session...' }]);
+    setApprovalPending(false);
+    setWorkflowCompleted(false);
+
+    try {
+      const res = await fetch('http://localhost:8000/api/workflow/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, message: currentInput })
+      });
+      if (!res.ok) throw new Error("Failed to send message");
+    } catch (e) {
+      setLogs(prev => [...prev, { agent: 'System', msg: `Failed to send message: ${e.message}` }]);
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSubmit = () => {
+    // workflowStarted = true means a real workflow session exists in Cosmos.
+    // After a doc-only upload, sessionActive=true but no workflow exists yet,
+    // so we start a new one (which will carry the same sessionId and access the uploaded chunks).
+    if (sessionActive && sessionId && workflowStarted) {
+      continueWorkflow();
+    } else {
+      startWorkflow();
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    let targetSessionId = sessionId;
+    if (!targetSessionId) {
+      targetSessionId = "ORCH-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+      setSessionId(targetSessionId);
+      setSessionActive(true);
+      setLogs([{ agent: 'System', msg: `Session initialized for document upload: ${targetSessionId}` }]);
+    }
+
+    setIsUploading(true);
+    setChat(prev => [...prev, { id: Date.now(), role: 'user', content: `[Uploading Document: ${file.name}...]` }]);
+
+    const formData = new FormData();
+    formData.append('session_id', targetSessionId);
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('http://localhost:8000/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setChat(prev => prev.map(m => m.content.includes(file.name) ? { ...m, content: `[Uploaded & Indexed: ${file.name} (${data.chunks_processed} pages)]` } : m));
+      } else {
+        throw new Error(data.detail || data.message || "Upload failed");
+      }
+    } catch (err) {
+      setChat(prev => prev.map(m => m.content.includes(file.name) ? { ...m, content: `[Failed: ${file.name} - ${err.message}]` } : m));
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleStarterClick = (text) => {
     setInput(text);
@@ -470,6 +698,7 @@ export default function App() {
     setInput('');
     setIsProcessing(true);
     setSessionActive(true);
+    setWorkflowStarted(true);
     setTasks([]);
     setLogs([{ agent: 'System', msg: 'Submitting workflow request to backend...' }]);
     setApprovalPending(false);
@@ -479,7 +708,11 @@ export default function App() {
       const res = await fetch('http://localhost:8000/api/workflow/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: currentInput })
+        body: JSON.stringify({
+          prompt: currentInput,
+          session_id: sessionId,
+          enabled_mcps: selectedMcps
+        })
       });
       const data = await res.json();
       setSessionId(data.session_id);
@@ -522,6 +755,20 @@ export default function App() {
     }
   };
 
+  const handleDeleteSession = async (e, sid) => {
+    e.stopPropagation();
+    if (!window.confirm("Delete this workflow history?")) return;
+    try {
+      await fetch(`http://localhost:8000/api/workflow/${sid}`, { method: 'DELETE' });
+      setSessionHistory(prev => prev.filter(s => s.session_id !== sid));
+      if (sessionId === sid) {
+        window.location.reload();
+      }
+    } catch (e) {
+      console.error("Failed to delete session", e);
+    }
+  };
+
   return (
     <>
       <style>{systemCss}</style>
@@ -542,7 +789,30 @@ export default function App() {
           </button>
 
           <div className="nav-group">
-            <div className="nav-item active"><MessageSquare size={16} /> Orchestration Hub</div>
+            <div className="nav-item active"><MessageSquare size={16} /> Current Session</div>
+          </div>
+
+          <div className="sidebar-title" style={{ marginTop: '20px', padding: '0 12px', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Recent Workflows</div>
+          <div className="history-list" style={{ flex: 1, overflowY: 'auto' }}>
+            {sessionHistory.map(session => (
+              <div
+                key={session.session_id}
+                className="nav-item"
+                style={{ opacity: 0.8, cursor: 'pointer', marginBottom: '4px' }}
+                onClick={() => loadHistoricalSession(session.session_id)}
+              >
+                <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '13px', flex: 1 }}>
+                  {session.initial_prompt}
+                </div>
+                <div
+                  className="delete-action"
+                  onClick={(e) => handleDeleteSession(e, session.session_id)}
+                  style={{ padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Trash2 size={12} color="var(--text-tertiary)" hovercolor="var(--danger)" />
+                </div>
+              </div>
+            ))}
           </div>
         </aside>
 
@@ -550,9 +820,49 @@ export default function App() {
         <main className="main-area">
           <header className="top-header">
             <div className="breadcrumb">Workflows / Active / <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>New Session</span></div>
-            <div className="header-actions">
+            <div className="header-actions" style={{ position: 'relative' }}>
               <button className="btn-share"><Share size={14} /> Share</button>
-              <div className="avatar"><User size={18} color="var(--text-secondary)" /></div>
+              <div
+                className="avatar"
+                style={{ cursor: 'pointer', background: showSettings ? 'var(--bg-secondary)' : '' }}
+                onClick={() => setShowSettings(!showSettings)}
+              >
+                <Settings size={18} color="var(--text-secondary)" />
+              </div>
+
+              {showSettings && (
+                <div className="settings-dropdown" style={{
+                  position: 'absolute', top: '45px', right: 0, width: '220px',
+                  background: 'var(--bg-primary)', border: '1px solid var(--border)',
+                  borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                  zIndex: 1000, padding: '8px'
+                }}>
+                  <div
+                    className="nav-item"
+                    style={{ margin: 0, padding: '10px 12px', borderRadius: '8px' }}
+                    onClick={() => { window.location.reload(); setShowSettings(false); }}
+                  >
+                    <Trash2 size={14} color="var(--danger)" />
+                    <span style={{ marginLeft: '10px' }}>Clear Current Session</span>
+                  </div>
+                  <div
+                    className="nav-item"
+                    style={{ margin: '4px 0 0 0', padding: '10px 12px', borderRadius: '8px' }}
+                    onClick={() => { window.location.href = '/mcp'; setShowSettings(false); }}
+                  >
+                    <Link size={14} color="var(--accent-primary)" />
+                    <span style={{ marginLeft: '10px' }}>Manage MCP Connectors</span>
+                  </div>
+                  <div
+                    className="nav-item"
+                    style={{ margin: '4px 0 0 0', padding: '10px 12px', borderRadius: '8px' }}
+                    onClick={() => { alert("OrchestrAI v1.0\nPowered by Groq & AutoGen\nBuild 2025.03.08"); setShowSettings(false); }}
+                  >
+                    <Info size={14} color="var(--text-secondary)" />
+                    <span style={{ marginLeft: '10px' }}>App Intelligence Info</span>
+                  </div>
+                </div>
+              )}
             </div>
           </header>
 
@@ -581,13 +891,15 @@ export default function App() {
             ) : (
               <div className="chat-container">
                 {chat.map(msg => (
-                  <div key={msg.id} className="message">
+                  <div key={msg.id} className="message" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
                     <div className={`msg-avatar ${msg.role}`}>
                       {msg.role === 'user' ? <User size={16} /> : <BrainCircuit size={16} />}
                     </div>
                     <div className="msg-content">
-                      <div className="msg-author">{msg.role === 'user' ? 'You' : 'OrchestrAI System'}</div>
-                      <div className="msg-bubble">{msg.content}</div>
+                      <div className="msg-author">{msg.role === 'user' ? 'You' : (msg.agent || 'OrchestrAI System')}</div>
+                      <div className="msg-bubble markdown-body" style={{ whiteSpace: msg.role === 'user' ? 'pre-wrap' : 'normal', fontFamily: 'inherit' }}>
+                        {msg.role === 'user' ? msg.content : <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{msg.content}</ReactMarkdown>}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -610,20 +922,44 @@ export default function App() {
               <div className={`toggle-chip ${toggles.humanApproval ? 'active' : ''}`} onClick={() => setToggles(p => ({ ...p, humanApproval: !p.humanApproval }))}>
                 <ShieldCheck size={12} /> HITL Approval Required
               </div>
+              <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }} />
+              {availableMcps.map(mcp => (
+                <div
+                  key={mcp.id}
+                  className={`toggle-chip ${selectedMcps.includes(mcp.id) ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedMcps(prev =>
+                      prev.includes(mcp.id) ? prev.filter(id => id !== mcp.id) : [...prev, mcp.id]
+                    );
+                  }}
+                >
+                  <Link size={12} /> {mcp.name}
+                </div>
+              ))}
+              {availableMcps.length === 0 && (
+                <div className="toggle-chip" onClick={() => window.location.href = '/mcp'} style={{ borderStyle: 'dashed' }}>
+                  <Plus size={12} /> Add MCP
+                </div>
+              )}
             </div>
             <div className="input-row">
-              <button className="icon-btn"><Paperclip size={18} /></button>
+              <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} accept=".txt,.pdf,.md,.csv" />
+              <button className="icon-btn" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                <Paperclip size={18} />
+              </button>
               <input
                 type="text"
                 className="input-field"
                 placeholder="Declare workflow objective here..."
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && startWorkflow()}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                 disabled={isProcessing}
               />
-              <button className="icon-btn"><Mic size={18} /></button>
-              <button className="send-btn" onClick={startWorkflow} disabled={!input.trim() || isProcessing}>
+              <button className="icon-btn" onClick={toggleListening} title={isListening ? "Listening..." : "Click to speak"}>
+                <Mic size={18} color={isListening ? "var(--danger)" : "var(--text-secondary)"} />
+              </button>
+              <button className="send-btn" onClick={handleSubmit} disabled={!input.trim() || isProcessing}>
                 <Send size={16} />
               </button>
             </div>
