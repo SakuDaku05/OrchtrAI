@@ -110,7 +110,7 @@ flowchart TD
     subgraph Agent Compute Environment
         Worker[Scalable Worker Processes\nAzure Container Apps]
         
-        subgraph Multi-Agent Swarm (AutoGen)
+        subgraph Swarm ["Multi-Agent Swarm (AutoGen)"]
             Direction[The Planner]
             Research[The Researcher]
             Action[The Executor]
