@@ -1,0 +1,7 @@
+# Terminal 1 — Backend
+cd d:\MachineLearning\OrchtrAI
+python -m uvicorn backend.main:app --reload --port 8000
+
+# Terminal 2 — Frontend
+cd d:\MachineLearning\OrchtrAI\frontend
+npm run dev
