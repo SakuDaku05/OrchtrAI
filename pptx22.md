@@ -36,10 +36,12 @@
 *(3-5 Top Features + Flow Diagram)*
 
 **Top Technical Features**
-1.  **Multi-Agent Topology:** Specialized personas (Planner, Researcher, Executor, Reviewer) powered by AutoGen.
-2.  **Tiered Model Strategy:** Framework-agnostic routing matching task complexity to cost-effective models (Frontier LLMs vs SLMs).
-3.  **Strict HITL Halts:** Agents cannot mutate external states; they must output `PENDING_APPROVAL` for manual sign-off.
-4.  **Async Brokering:** Azure Service Bus decouples heavy LLM logic from the UI, ensuring zero timeouts.
+1. **Multi-Agent Topology:** Distinct Planner, Researcher, Executor, and Reviewer personas collaborating via AutoGen.
+2. **Framework-Agnostic Routing:** dynamically routes tasks to expensive complex models or fast, cheap SLMs to optimize budget.
+3. **Strict HITL Halts:** Agents emit `PENDING_APPROVAL` states, enforcing manual sign-off before any external action.
+4. **Async Message Brokering:** Azure Service Bus decouples LLM logic from the UI, ensuring the React frontend never hangs. 
+5. **Stateful Memory Resumption:** Cosmos DB persists workflow graphs, allowing tasks to pause and resume perfectly days later.
+6. **Standardized Tool Integration (MCP):** Dynamic connection to enterprise APIs via the Model Context Protocol, removing the need for rigid tool schemas.
 
 **User Flow Diagram** *(Keep it clean and visual)*
 ```mermaid
@@ -52,9 +54,9 @@ sequenceDiagram
     User->>App: Submits Goal
     App->>Core: Queues Task 
     activate Agents
-    Core->>Agents: Async Trigger
+    Agents->>Agents: Async Trigger
     Agents->>Agents: Planner > Researcher > Executor > Reviewer
-    Agents->>Core: Saves drafted payload + Triggers PAUSE
+    Agents->>Core: Saves drafted payload (via MCP) + Triggers PAUSE
     deactivate Agents
     Core-->>App: Displays HITL Approval Card
     User->>App: Clicks "Approve"
@@ -69,10 +71,12 @@ sequenceDiagram
 *(Conceptual System Design)*
 
 **Built for Azure-Native Scalability and Security**
-*   **Frontend Display:** React Dashboard streaming agent telemetry and HITL cards.
-*   **Asynchronous Spine:** Azure Service Bus queueing to handle unbounded multi-agent loop latencies.
-*   **Stateful Workflows:** Azure Cosmos DB (NoSQL) persists conversational memory across infinite pauses.
-*   **Agent Execution:** Scale-to-zero Azure Container Apps running Python worker nodes and AutoGen libraries. 
+*   **Command Center (Frontend):** React dashboard streaming live agent telemetry and isolated HITL approval cards.
+*   **API Gateway (Backend):** FastAPI layer handling validation and state serialization without blocking on LLMs.
+*   **Asynchronous Spine (Event Bus):** Azure Service Bus queues prevent timeouts by decoupling heavy agent loops from the gateway.
+*   **Agent Arena (Worker Nodes):** Scale-to-zero Container Apps that pull jobs, hydrate memory, and run the AutoGen loop.
+*   **Tool Registry (MCP):** Model Context Protocol layer seamlessly bridging AutoGen reasoning with external enterprise tools.
+*   **Engine Room (AI Routing):** Flexible routing to hot-swap between frontier models (Planner) and latency-optimized SLMs (Executor). 
 
 **System Architecture Visual**
 ```mermaid
@@ -92,7 +96,10 @@ flowchart LR
     end
     E --> Swarm
     
-    Swarm -.->|Web Search| Web((Public Web))
+    MCPRegistry[MCP Tool Registry]
+    Swarm -->|Invocations| MCPRegistry
+    
+    MCPRegistry -.->|Web Search| Web((Public Web))
     Swarm ==>|Drafts PAUSE Payload| C
     E -.->|Fires Action ON APPROVAL| F((Target APIs))
     

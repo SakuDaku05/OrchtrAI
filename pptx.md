@@ -41,6 +41,7 @@
 3.  **Strict Human-in-the-Loop (HITL) Halts:** Agents are firewalled from direct external mutation. They must output a serialized `PENDING_APPROVAL` state, halting the backend loop until a human explicitly signs off.
 4.  **Asynchronous Message Brokering:** Heavy LLM reasoning cycles are decoupled from the UI using Azure Service Bus, guaranteeing a snappy React frontend even when background agents debate a task for minutes.
 5.  **Stateful Memory Resumption:** Workflows can be paused for days. The entire agent graph memory is saved securely in a NoSQL database and instantly re-hydrated back into the worker node when the user resumes the task.
+6.  **Standardized Tool Integration via MCP:** Built entirely on the Model Context Protocol (MCP) to supply the agents with dynamically loaded, framework-agnostic tools. This abstracts the underlying logic of APIs and avoids brittle, hardcoded function wrappers.
 
 **User Flow Sequence:**
 
@@ -60,8 +61,8 @@ sequenceDiagram
     activate Agents
     Queue-->>Agents: Trigger Agent Swarm
     Agents->>Agents: Planner decomposes objective
-    Agents->>Agents: Researcher gathers external context
-    Agents->>Agents: Executor drafts tool/API payloads
+    Agents->>Agents: Researcher gathers external context via MCP
+    Agents->>Agents: Executor drafts tool/API payloads via MCP
     Agents->>Agents: Quality Reviewer asserts compliance
     Agents->>DB: Save Memory State & Set [PAUSED_FOR_HITL]
     deactivate Agents
@@ -91,6 +92,7 @@ Our blueprint emphasizes extreme scalability, decoupled boundaries, and cloud-na
 *   **The API Gateway (Backend):** A Python FastAPI layer acting as the traffic cop. It handles authentication, validation, and state serialization without ever blocking to wait on LLM responses.
 *   **The Asynchronous Spine (Event Bus):** Because multi-agent loops are highly variable in duration, we utilize Azure Service Bus. This queueing system ensures we never drop tasks under load and allows workers to scale independently from the gateway.
 *   **The Agent Arena (Worker Nodes):** Hosted on scale-to-zero container apps, these Python workers pull jobs from the queue, spin up the AutoGen team, re-hydrate past conversational memory, and run the LLM loop until the Reviewer agent halts the process.
+*   **The Central Tool Registry (MCP):** Connects the swarm dynamically to real-world tasks via the Model Context Protocol (MCP), surfacing tools uniformly to the agents while remaining highly isolated from their reasoning logic.
 *   **The Engine Room (AI Routing):** Instead of a monolithic model, we designed a flexible routing layer that can hot-swap foundational models via Azure OpenAI/Foundry. This allows us to use top-tier instruction models for the "Planner" and highly-quantized, latency-optimized SLMs for simple API mapping.
 
 **High-Level Architecture Diagram:**
@@ -120,6 +122,9 @@ flowchart TD
             Research --> Action
             Action --> Guardrail
         end
+        
+        MCPRegistry[MCP Tool Registry\nModel Context Protocol]
+        Swarm --> |Tool Invocations| MCPRegistry
     end
     
     subgraph External Periphery
@@ -137,8 +142,8 @@ flowchart TD
     
     Worker --> Direction
     
-    Research --> PublicWeb
-    Action -.-> |Drafts Secure Payloads| TargetAPI
+    MCPRegistry -->|Fetch Context| PublicWeb
+    MCPRegistry -.-> |Draft Secure Payloads| TargetAPI
     Guardrail --> |Triggers HITL Pause| DB
     
     API --> |Enqueue Approval Event| SB
@@ -148,7 +153,7 @@ flowchart TD
     classDef primary fill:#2563EB,stroke:#fff,stroke-width:2px,color:#fff;
     classDef secondary fill:#475569,stroke:#fff,stroke-width:1px,color:#fff;
     class DB,SB,Worker primary;
-    class Direction,Research,Action,Guardrail secondary;
+    class Direction,Research,Action,Guardrail,MCPRegistry secondary;
 ```
 
 ---
