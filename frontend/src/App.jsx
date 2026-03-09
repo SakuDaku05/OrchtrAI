@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Search, ShieldCheck, BrainCircuit, Check, X, Send, Clock,
   FileText, Calendar, TerminalSquare, AlertCircle, ChevronDown,
-  MessageSquare, Image as ImageIcon, Code, Sparkles, Plus,
-  Paperclip, Mic, Share, User, LayoutDashboard, Database, Settings, Trash2, Info, Link, Music
+  MessageSquare, Image as ImageIcon, Code, Sparkles, Plus, Flame, Wind,
+  Paperclip, Mic, Share, User, LayoutDashboard, Database, Settings, Trash2, Info, Link, Music, TrendingUp
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -393,13 +393,104 @@ const systemCss = `
   .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .toggles-row { display: flex; gap: 8px; align-items: center; }
-  .toggle-chip {
-    display: flex; align-items: center; gap: 6px; padding: 6px 10px;
-    background: var(--bg-main); border: 1px solid var(--border-light);
-    border-radius: 6px; font-size: 12px; font-weight: 500; color: var(--text-secondary);
-    cursor: pointer; transition: 0.2s;
-  }
   .toggle-chip:hover, .toggle-chip.active { background: #f1f5f9; border-color: var(--border-color); color: var(--text-primary); }
+
+  /* Tools Dropdown - Premium Redesign */
+  .tools-container { position: relative; }
+  .tools-dropdown {
+    position: absolute;
+    bottom: calc(100% + 14px);
+    left: 0;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    box-shadow: 
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(0, 0, 0, 0.05);
+    width: 300px;
+    padding: 12px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transform-origin: bottom left;
+    animation: premiumPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes premiumPop {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .dropdown-label {
+    padding: 4px 12px 8px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .tool-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+    border: 1px solid transparent;
+  }
+
+  .tool-item:hover {
+    background: rgba(241, 245, 249, 0.8);
+    transform: translateX(4px);
+  }
+
+  /* Specific Gradient States */
+  .tool-item.active.spotify {
+    background: linear-gradient(135deg, rgba(29, 185, 84, 0.1), rgba(29, 185, 84, 0.05));
+    border-color: rgba(29, 185, 84, 0.3);
+    color: #169041;
+  }
+  .tool-item.active.finance {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #2563eb;
+  }
+  .tool-item.active.generic {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.03));
+    border-color: rgba(15, 23, 42, 0.2);
+    color: var(--text-primary);
+  }
+
+  .tool-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.3s ease;
+    color: var(--text-secondary);
+  }
+  .tool-item:hover .tool-icon { transform: scale(1.1); }
+  
+  .tool-item.active.spotify .tool-icon { color: #1db954; box-shadow: 0 4px 12px rgba(29, 185, 84, 0.2); }
+  .tool-item.active.finance .tool-icon { color: #3b82f6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); }
+
+  .tool-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .tool-name { display: block; font-weight: 600; }
+  .tool-desc { display: block; font-size: 11px; color: var(--text-tertiary); font-weight: 400; }
+  .tool-check { color: currentColor; }
 
   /* --- RIGHT SIDEBAR: AGENT MISSION CONTROL --- */
   .execution-pane {
@@ -501,8 +592,156 @@ const systemCss = `
   .telemetry-box::-webkit-scrollbar-thumb { background: #334155; }
   .telemetry-box::-webkit-scrollbar-thumb:hover { background: #475569; }
 
+  /* Status Bubble & Animations */
+  .status-bubble {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    width: fit-content;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent-primary);
+    border-radius: 50%;
+    position: relative;
+    animation: pulse-dot 1.5s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+  }
+
+  @keyframes pulse-dot {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(0.8); opacity: 0.5; }
+  }
+
+  .pulse-icon {
+    animation: pulse-icon 2s ease-in-out infinite;
+    color: var(--accent-primary);
+  }
+
+  @keyframes pulse-icon {
+    0% { transform: scale(1); filter: drop-shadow(0 0 0px var(--accent-primary)); }
+    50% { transform: scale(1.1); filter: drop-shadow(0 0 5px var(--accent-primary)); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 0px var(--accent-primary)); }
+  }
+
   @media (max-width: 1024px) {
     .execution-pane { display: none; }
+  }
+
+  /* Fabulous Global Calendar */
+  .calendar-panel {
+    position: absolute; top: 70px; right: 20px; bottom: 100px; width: 360px;
+    background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px;
+    display: flex; flex-direction: column; z-index: 1001;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.1);
+    animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes slideInRight { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  .calendar-header {
+    padding: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .calendar-title { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; color: white; }
+  .spin-slow { animation: spin 4s linear infinite; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  .calendar-content { flex: 1; overflow-y: auto; padding: 20px; position: relative; }
+  .calendar-stats { display: flex; gap: 12px; margin-bottom: 24px; }
+  .stat-card {
+    flex: 1; background: rgba(255, 255, 255, 0.03); padding: 12px; border-radius: 12px;
+    display: flex; flex-direction: column; gap: 4px; border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .stat-label { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-val { font-size: 18px; font-weight: 700; color: white; }
+  
+  .calendar-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+    margin-bottom: 20px; background: rgba(255, 255, 255, 0.02);
+    padding: 8px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .grid-day-header {
+    font-size: 10px; font-weight: 700; color: var(--text-tertiary);
+    text-align: center; padding: 4px 0; text-transform: uppercase;
+  }
+  .grid-day {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;
+    color: rgba(255, 255, 255, 0.4); position: relative;
+  }
+  .grid-day.current { color: rgba(255, 255, 255, 0.9); }
+  .grid-day:hover { background: rgba(255, 255, 255, 0.1); }
+  .grid-day.selected { background: #3b82f6; color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+  .grid-day.today { border: 1px solid #3b82f6; color: #3b82f6; }
+  .grid-day.has-event::after {
+    content: ''; position: absolute; bottom: 4px; width: 4px; height: 4px;
+    background: #3b82f6; border-radius: 50%;
+  }
+
+  .calendar-filter-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px; padding: 0 4px;
+  }
+  .filter-info { font-size: 11px; color: var(--text-secondary); font-weight: 600; }
+  .reset-filter-btn {
+    font-size: 10px; color: #3b82f6; cursor: pointer;
+    background: rgba(59, 130, 246, 0.1); padding: 4px 8px; border-radius: 6px;
+    border: 1px solid rgba(59, 130, 246, 0.2); transition: all 0.2s;
+  }
+  .reset-filter-btn:hover { background: rgba(59, 130, 246, 0.2); }
+
+  .event-list { display: flex; flex-direction: column; gap: 16px; }
+  .empty-calendar {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 200px; color: var(--text-tertiary); text-align: center; gap: 16px;
+    font-size: 13px; opacity: 0.6;
+  }
+
+  .event-card {
+    position: relative; display: flex; gap: 16px; background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 16px;
+    transition: all 0.3s ease; overflow: hidden;
+  }
+  .event-card:hover { transform: translateY(-3px); background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.1); }
+  
+  .event-time-strip { display: flex; flex-direction: column; min-width: 50px; border-right: 1px solid rgba(255, 255, 255, 0.05); padding-right: 12px; }
+  .time { font-size: 14px; font-weight: 700; color: white; }
+  .date { font-size: 10px; color: var(--text-tertiary); }
+
+  .event-body { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .event-type-badge {
+    font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; width: fit-content;
+    text-transform: uppercase; color: white; letter-spacing: 0.05em;
+  }
+  .meeting .event-type-badge { background: #3b82f6; }
+  .reminder .event-type-badge { background: #8b5cf6; }
+  
+  .event-title { font-size: 14px; font-weight: 600; color: white; margin: 0; }
+  .event-desc { font-size: 12px; color: var(--text-tertiary); line-height: 1.4; margin: 0; }
+
+  .event-glow {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none;
+    background: radial-gradient(600px circle at var(--x, 0px) var(--y, 0px), rgba(255,255,255,.06), transparent 40%);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .event-card:hover .event-glow { opacity: 1; }
+
+  .calendar-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 15px; color: var(--text-tertiary); font-size: 13px; }
+  .loader-ring { width: 30px; height: 30px; border: 2px solid rgba(255,255,255,0.05); border-top-color: var(--accent-primary); border-radius: 50%; animation: spin 1s linear infinite; }
+
+  @media (max-width: 768px) {
+    .calendar-panel { width: calc(100% - 40px); left: 20px; }
   }
   @media (max-width: 768px) {
     .sidebar { display: none; }
@@ -525,10 +764,28 @@ export default function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [availableMcps, setAvailableMcps] = useState([]);
   const [selectedMcps, setSelectedMcps] = useState([]);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsRef = useRef(null);
+  const [currentStatus, setCurrentStatus] = useState('Agents are working...');
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [selectedFilterDate, setSelectedFilterDate] = useState(null);
+
+  // Click away for tools dropdown
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (toolsRef.current && !toolsRef.current.contains(event.target)) {
+        setToolsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const fetchAvailableMcps = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/mcp');
+      const res = await fetch(`http://127.0.0.1:8000/api/mcp?t=${Date.now()}`);
       const data = await res.json();
       setAvailableMcps(data.configs || []);
     } catch (e) {
@@ -539,6 +796,38 @@ export default function App() {
   useEffect(() => {
     fetchAvailableMcps();
   }, []);
+
+  const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+  const generateGrid = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = getDaysInMonth(year, month);
+    const prevMonthDays = getDaysInMonth(year, month - 1);
+    const days = [];
+    for (let i = firstDay - 1; i >= 0; i--) days.push({ day: prevMonthDays - i, current: false, month: month - 1, year });
+    for (let i = 1; i <= daysInMonth; i++) days.push({ day: i, current: true, month, year });
+    const remaining = 42 - days.length;
+    for (let i = 1; i <= remaining; i++) days.push({ day: i, current: false, month: month + 1, year });
+    return days;
+  };
+
+  const hasEventOnDay = (day, m, y) => {
+    return calendarEvents.some(evt => {
+      const d = new Date(evt.start_time);
+      return d.getDate() === day && d.getMonth() === m && d.getFullYear() === y;
+    });
+  };
+
+  const filteredEvents = selectedFilterDate
+    ? calendarEvents.filter(evt => {
+      const d = new Date(evt.start_time);
+      return d.getDate() === selectedFilterDate.day &&
+        d.getMonth() === selectedFilterDate.month &&
+        d.getFullYear() === selectedFilterDate.year;
+    })
+    : calendarEvents;
 
   const loadHistory = async () => {
     try {
@@ -551,8 +840,29 @@ export default function App() {
     }
   };
 
+  const fetchCalendarEvents = async () => {
+    try {
+      setCalendarLoading(true);
+      const res = await fetch(`http://127.0.0.1:8000/api/calendar?t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCalendarEvents(data.events || []);
+      }
+    } catch (e) {
+      console.error("Failed to fetch calendar", e);
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadHistory();
+    fetchCalendarEvents();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(fetchCalendarEvents, 10000); // 10s sync
+    return () => clearInterval(interval);
   }, []);
 
   const loadHistoricalSession = async (id) => {
@@ -632,13 +942,28 @@ export default function App() {
           if (!res.ok) return;
           const data = await res.json();
 
-          const mappedLogs = (data.chat_history || []).map(item => ({
-            agent: item.agent,
+          // 1. Update Telemetry Logs (Full History)
+          const allHistory = data.chat_history || [];
+          if (allHistory.length === 0) return; // Don't wipe UI if backend hasn't saved anything yet
+
+          const mappedLogs = allHistory.map(item => ({
+            agent: item.agent || (item.role === 'user' ? 'User' : 'Assistant'),
             msg: item.content
           }));
           setLogs(mappedLogs);
 
-          const allHistory = data.chat_history || [];
+          // 2. Derive Current Status from latest agent
+          if (isProcessing && allHistory.length > 0) {
+            const lastAgent = allHistory[allHistory.length - 1].agent;
+            if (lastAgent === 'Planner') setCurrentStatus('Planning workflow...');
+            else if (lastAgent === 'Researcher') setCurrentStatus('Researching context...');
+            else if (lastAgent === 'Executor') setCurrentStatus('Executing actions...');
+            else if (lastAgent === 'Reviewer') setCurrentStatus('Reviewing results...');
+            else if (lastAgent === 'User') setCurrentStatus('Waiting for input...');
+            else setCurrentStatus('Processing request...');
+          }
+
+          // 3. Update Main Chat (Filtered)
           const hasFinalizer = allHistory.some(m => m.agent === 'Finalizer');
 
           const mappedChat = allHistory
@@ -647,13 +972,9 @@ export default function App() {
               const isFinalizer = item.agent === 'Finalizer';
               const isSystem = item.agent === 'System';
 
-              if (hasFinalizer) {
-                // Show only the "Outcome" (User, Finalizer, System)
-                return isUser || isFinalizer || isSystem;
-              }
-              // Fallback: Show all agents while still in progress
-              const isAgent = ['Planner', 'Researcher', 'Executor', 'Reviewer'].includes(item.agent);
-              return isUser || isAgent || isSystem || (!item.role && item.agent);
+              // ALWAYS hide intermediate agents (Planner, Researcher, etc.) from main panel
+              // Only show User prompts, Finalizer answers, and System notices
+              return isUser || isFinalizer || isSystem;
             })
             .map((item, idx) => {
               const isUser = item.role === 'user' || item.agent === 'User';
@@ -933,11 +1254,18 @@ export default function App() {
             <div className="header-actions" style={{ position: 'relative' }}>
               <button className="btn-share"><Share size={14} /> Share</button>
               <div
-                className="avatar"
-                style={{ cursor: 'pointer', background: showSettings ? 'var(--bg-secondary)' : '' }}
-                onClick={() => setShowSettings(!showSettings)}
+                className={`icon-btn ${showCalendar ? 'active' : ''}`}
+                style={{ background: showCalendar ? 'rgba(59, 130, 246, 0.1)' : '', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                onClick={() => { setShowCalendar(!showCalendar); setShowSettings(false); }}
               >
-                <Settings size={18} color="var(--text-secondary)" />
+                <Calendar size={18} color={showCalendar ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+              </div>
+              <div
+                className={`icon-btn ${showSettings ? 'active' : ''}`}
+                style={{ background: showSettings ? 'var(--bg-secondary)' : '', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', marginLeft: '8px' }}
+                onClick={() => { setShowSettings(!showSettings); setShowCalendar(false); }}
+              >
+                <Settings size={18} color={showSettings ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
               </div>
 
               {showSettings && (
@@ -1014,17 +1342,105 @@ export default function App() {
                   </div>
                 ))}
                 {isProcessing && !approvalPending && (
-                  <div className="message">
-                    <div className="msg-avatar ai"><Clock size={16} style={{ animation: 'spin 2s linear infinite' }} /></div>
+                  <div className="message progress-msg">
+                    <div className="msg-avatar ai"><BrainCircuit size={16} className="pulse-icon" /></div>
                     <div className="msg-content">
                       <div className="msg-author">OrchestrAI System</div>
-                      <div className="msg-bubble" style={{ color: 'var(--text-secondary)' }}>Agents are executing the workflow...</div>
+                      <div className="status-bubble">
+                        <div className="pulse-dot"></div>
+                        <span>{currentStatus}</span>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
             )}
           </div>
+
+          {/* Fabulous Global Calendar Panel */}
+          {showCalendar && (
+            <div className="calendar-panel">
+              <div className="calendar-header">
+                <div className="calendar-title">
+                  <Flame size={18} className="spin-slow" />
+                  <span>Global Timeline</span>
+                </div>
+                <button className="close-btn" onClick={() => setShowCalendar(false)}><X size={16} /></button>
+              </div>
+
+              <div className="calendar-content">
+                <div className="calendar-stats">
+                  <div className="stat-card">
+                    <span className="stat-label">Total Events</span>
+                    <span className="stat-val">{calendarEvents.length}</span>
+                  </div>
+                  <div className="stat-card">
+                    <span className="stat-label">Matched</span>
+                    <span className="stat-val">{filteredEvents.length}</span>
+                  </div>
+                </div>
+
+                {/* Date Grid Picker */}
+                <div className="calendar-grid">
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, ix) => (
+                    <div key={ix} className="grid-day-header">{day}</div>
+                  ))}
+                  {generateGrid().map((d, i) => {
+                    const isSelected = selectedFilterDate && selectedFilterDate.day === d.day && selectedFilterDate.month === d.month;
+                    const isToday = new Date().getDate() === d.day && new Date().getMonth() === d.month;
+                    const hasEvt = d.current && hasEventOnDay(d.day, d.month, d.year);
+                    return (
+                      <div
+                        key={i}
+                        className={`grid-day ${d.current ? 'current' : ''} ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''} ${hasEvt ? 'has-event' : ''}`}
+                        onClick={() => setSelectedFilterDate(isSelected ? null : d)}
+                      >
+                        {d.day}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="calendar-filter-bar">
+                  <div className="filter-info">
+                    {selectedFilterDate ? `Filtering: ${new Date(selectedFilterDate.year, selectedFilterDate.month, selectedFilterDate.day).toLocaleDateString([], { month: 'short', day: 'numeric' })}` : 'Upcoming Events'}
+                  </div>
+                  {selectedFilterDate && (
+                    <div className="reset-filter-btn" onClick={() => setSelectedFilterDate(null)}>Clear</div>
+                  )}
+                </div>
+
+                <div className="event-list">
+                  {calendarLoading && calendarEvents.length === 0 ? (
+                    <div className="empty-calendar">
+                      <Sparkles size={32} className="pulse-icon" />
+                      <p>Syncing global timeline...</p>
+                    </div>
+                  ) : filteredEvents.length === 0 ? (
+                    <div className="empty-calendar">
+                      <Wind size={32} />
+                      <p>{selectedFilterDate ? "No events scheduled for this day." : "Your timeline is quiet."}</p>
+                    </div>
+                  ) : (
+                    filteredEvents.map((evt, idx) => (
+                      <div key={idx} className={`event-card ${evt.type?.toLowerCase()}`}>
+                        <div className="event-time-strip">
+                          <span className="time">{new Date(evt.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                          <span className="date">{new Date(evt.start_time).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                        </div>
+                        <div className="event-body">
+                          <div className="event-type-badge">{evt.type}</div>
+                          <h4 className="event-title">{evt.title}</h4>
+                          <p className="event-desc">{evt.description}</p>
+                        </div>
+                        <div className="event-glow"></div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Floating Input Area */}
           <div className="input-wrapper">
@@ -1033,29 +1449,56 @@ export default function App() {
                 <ShieldCheck size={12} /> HITL Approval Required
               </div>
               <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }} />
-              {availableMcps.map(mcp => {
-                const isSpotify = mcp.service?.toLowerCase() === 'spotify' || mcp.name?.toLowerCase().includes('spotify');
-                const isActive = selectedMcps.includes(mcp.id);
-                return (
-                  <div
-                    key={mcp.id}
-                    className={`toggle-chip ${isActive ? 'active' : ''}`}
-                    style={isSpotify && isActive ? { borderColor: '#1db954', color: '#1db954', background: '#f0fdf4' } : {}}
-                    onClick={() => {
-                      setSelectedMcps(prev =>
-                        prev.includes(mcp.id) ? prev.filter(id => id !== mcp.id) : [...prev, mcp.id]
-                      );
-                    }}
-                  >
-                    {isSpotify ? <Music size={12} /> : <Link size={12} />} {mcp.name}
-                  </div>
-                );
-              })}
-              {availableMcps.length === 0 && (
-                <div className="toggle-chip" onClick={() => window.location.href = '/mcp'} style={{ borderStyle: 'dashed' }}>
-                  <Plus size={12} /> Add MCP
+
+              <div className="tools-container" ref={toolsRef}>
+                <div className={`toggle-chip ${toolsOpen ? 'active' : ''}`} onClick={() => setToolsOpen(!toolsOpen)}>
+                  <Plus size={12} /> Tools {selectedMcps.length > 0 && <span style={{ marginLeft: '4px', background: 'var(--accent-primary)', color: 'white', padding: '0 4px', borderRadius: '4px', fontSize: '10px' }}>{selectedMcps.length}</span>}
                 </div>
-              )}
+
+                {toolsOpen && (
+                  <div className="tools-dropdown">
+                    <div className="dropdown-label">Available Capabilities</div>
+                    {availableMcps.map(mcp => {
+                      const service = (mcp.service || '').toLowerCase();
+                      const name = (mcp.name || '').toLowerCase();
+                      const isSpotify = service === 'spotify' || name.includes('spotify');
+                      const isFinance = service === 'finance' || name.includes('finance');
+                      const isActive = selectedMcps.includes(mcp.id);
+                      const typeClass = isSpotify ? 'spotify' : isFinance ? 'finance' : 'generic';
+
+                      return (
+                        <div
+                          key={mcp.id}
+                          className={`tool-item ${isActive ? 'active' : ''} ${typeClass}`}
+                          onClick={() => {
+                            setSelectedMcps(prev =>
+                              prev.includes(mcp.id) ? prev.filter(id => id !== mcp.id) : [...prev, mcp.id]
+                            );
+                          }}
+                        >
+                          <div className="tool-icon">
+                            {isSpotify ? <Music size={20} /> : isFinance ? <TrendingUp size={20} /> : <Link size={20} />}
+                          </div>
+                          <div className="tool-info">
+                            <span className="tool-name">{mcp.name}</span>
+                            <span className="tool-desc">{isSpotify ? 'Music & Playlists' : isFinance ? 'Market news & Data' : 'External Service'}</span>
+                          </div>
+                          {isActive && <Check size={18} className="tool-check" />}
+                        </div>
+                      );
+                    })}
+                    {availableMcps.length === 0 && (
+                      <div className="tool-item generic" onClick={() => window.location.href = '/mcp'}>
+                        <div className="tool-icon"><Plus size={20} /></div>
+                        <div className="tool-info">
+                          <span className="tool-name">Configure MCP</span>
+                          <span className="tool-desc">Add your first integration</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="input-row">
               <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} accept=".txt,.pdf,.md,.csv" />

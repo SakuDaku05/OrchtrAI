@@ -1,0 +1,51 @@
+OrchtrAI End-to-End Workflow Explanation
+==========================================
+
+1. USER INPUT (Frontend)
+------------------------
+- The user enters a prompt in the React frontend (App.jsx).
+- The prompt is sent to the FastAPI backend via the /api/task endpoint.
+- If it's a new request, a unique session_id (e.g., ORCH-XXXX) is generated.
+
+2. JOB QUEUING (Backend API)
+----------------------------
+- The API (main.py) saves an initial "ACTIVE" state to Azure Cosmos DB.
+- It then pushes a message containing the session_id and the user's prompt onto an Azure Service Bus queue.
+- The API immediately returns the session_id to the frontend so the UI can start polling for updates.
+
+3. WORKFLOW EXECUTION (Background Worker)
+-----------------------------------------
+- The Worker script (worker.py) listens to the Service Bus queue.
+- When a message arrives, it:
+    a) Loads the latest state from Cosmos DB.
+    b) Dynamically initializes requested MCP tools (Spotify, Finance, etc.).
+    c) Builds the AutoGen Multi-Agent Team (team.py).
+    d) Restores the team state if resuming an existing conversation.
+
+4. MULTI-AGENT COLLABORATION (AutoGen)
+--------------------------------------
+- PLANNER: Analyzes the prompt and creates a step-by-step technical plan.
+- RESEARCHER: Uses tools (DuckDuckGo, Finance) to gather real-world data and facts.
+- EXECUTOR: Performs actions (Booking meetings, adding Global Calendar events) using specific tools.
+- REVIEWER: Checks the work. It enforces Quality Control and determines if Human-In-The-Loop (HITL) approval is needed.
+- FINALIZER: Formats the raw technical results into a "fabulous," premium Markdown summary for the user.
+
+5. GLOBAL CALENDAR SYNC (Cross-Workflow Memory)
+------------------------------------------------
+- When the Executor schedules an event, it calls the 'add_global_event' tool (tools.py).
+- This saves the event directly to a shared 'calendar_events' container in Cosmos DB.
+- Because this container is shared, events scheduled in one workflow are visible to agents in all other workflows, providing a "Global Intelligence" memory.
+
+6. REAL-TIME UPDATES (Frontend Polling)
+---------------------------------------
+- While the background worker is running, the Frontend (App.jsx) polls the /api/history/{session_id} endpoint every few seconds.
+- It receives the latest 'chat_history' and its current status (Planning, Researching, etc.).
+- A separate high-frequency poller fetches the 'calendar_events' and updates the Global Timeline UI and Interactive Grid in real-time.
+
+7. DATA PERSISTENCE (Azure Cosmos DB)
+-------------------------------------
+- All workflow states, chat logs, agent memories, and MCP configurations are stored in Cosmos DB.
+- This allows the user to refresh the page or switch devices and resume any workflow exactly where it left off.
+
+==========================================
+Status: Fully Operational | Premium UI | Time-Aware Agents

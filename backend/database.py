@@ -71,6 +71,32 @@ class CosmosDBService:
         )
         print("DEBUG: Container 'mcp_configs' ready.")
 
+        # Global Calendar Events Container
+        self.calendar_container = await self.db.create_container_if_not_exists(
+            id="calendar_events",
+            partition_key=PartitionKey(path="/type")
+        )
+        print("DEBUG: Container 'calendar_events' ready.")
+
+    async def save_calendar_event(self, event: dict):
+        # event should have: id, title, start_time, end_time, description, type, created_at
+        if "created_at" not in event:
+            event["created_at"] = datetime.datetime.utcnow().isoformat()
+        if "type" not in event:
+            event["type"] = "MEETING" # Default partition key
+        await self.calendar_container.upsert_item(body=event)
+
+    async def get_calendar_events(self) -> list:
+        query = "SELECT * FROM c ORDER BY c.start_time ASC"
+        events = []
+        try:
+            async for item in self.calendar_container.query_items(query=query):
+                events.append(item)
+            return events
+        except Exception as e:
+            print(f"Error fetching calendar: {str(e)}")
+            return []
+
     async def save_state(self, state_dict: dict):
         state_dict["updated_at"] = datetime.datetime.utcnow().isoformat()
         state_dict["id"] = state_dict["session_id"] # Cosmos requires 'id' field

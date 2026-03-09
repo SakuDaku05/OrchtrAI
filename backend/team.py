@@ -4,11 +4,12 @@ from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_agentchat.conditions import TextMentionTermination, MaxMessageTermination
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from backend.config import settings
-from backend.tools import duckduckgo_tool, calendar_tool
+from backend.tools import duckduckgo_tool, calendar_tool, global_calendar_tool, current_time_tool
+import datetime
 
 def build_orchestrai_team(extra_tools: list = None, hitl_enabled: bool = True):
-    # model_info is required for non-OpenAI model names
     from autogen_core.models import ModelInfo
+    current_date = datetime.datetime.now().strftime("%A, %B %d, %Y")
 
     if extra_tools is None:
         extra_tools = []
@@ -38,14 +39,16 @@ def build_orchestrai_team(extra_tools: list = None, hitl_enabled: bool = True):
     planner = AssistantAgent(
         name="Planner",
         model_client=planner_client,
-        system_message="You are the Architect. Decompose the user's objective into a step-by-step plan. Assign steps to Researcher or Executor. Do NOT execute tools yourself."
+        tools=[current_time_tool],
+        system_message=f"You are the Architect. Today is {current_date}. Decompose the user's objective into a step-by-step plan. Assign steps to Researcher or Executor. Do NOT execute tools yourself."
     )
 
     researcher = AssistantAgent(
         name="Researcher",
         model_client=researcher_client,
-        tools=[duckduckgo_tool],
+        tools=[duckduckgo_tool, current_time_tool] + extra_tools,
         system_message="""You are the Context Gatherer. Use search tools to find facts. Return clear data for the Executor to use.
+        If you have Finance tools (like stock_news or stock_info), use them for stock-specific news or financial data.
         NOTE: If search returns no results, try broader or different keywords before giving up."""
     )
 
@@ -53,8 +56,11 @@ def build_orchestrai_team(extra_tools: list = None, hitl_enabled: bool = True):
     executor = AssistantAgent(
         name="Executor",
         model_client=executor_client,
-        tools=[calendar_tool] + extra_tools,
-        system_message="You are the Executor. You execute APIs based on the Planner's instructions and Researcher's data."
+        tools=[calendar_tool, global_calendar_tool, current_time_tool] + extra_tools,
+        system_message=f"""You are the Executor. Today is {current_date}. 
+        You execute APIs based on the Planner's instructions and Researcher's data.
+        PROACTIVE ACTION: If scheduling for a relative date like 'next Thursday', resolve it using today's date ({current_date}).
+        Do not ask the user for information you can infer from the current date or search results."""
     )
 
     # Determine reviewer instruction based on HITL setting
@@ -65,17 +71,19 @@ def build_orchestrai_team(extra_tools: list = None, hitl_enabled: bool = True):
         model_client=reviewer_client,
         system_message=f"""You are Quality Control.
         1. {hitl_instruction}
-        2. If the work is already approved or complete, output exactly: Quality Control: approved. Finalizer, please output the final summary.
-        3. If there are errors, provide feedback to the Executor."""
+        2. VERIFY EXECUTION: Only approve if you see a SUCCESS message from a tool execution (like add_global_event). 
+           If the Executor just 'plans' to do it or 'asks' for info, DO NOT APPROVE. Provide feedback to the Executor instead.
+        3. If the work is already approved or complete, output exactly: Quality Control: approved. Finalizer, please output the final summary.
+        4. If there are errors, provide feedback to the Executor."""
     )
 
     finalizer = AssistantAgent(
         name="Finalizer",
         model_client=make_client(settings.GROQ_API_KEY_2),
         system_message="""You are the Presenter. Convert technical results into a premium, beautiful summary.
-        1. USE RICH MARKDOWN: Use tables for lists, bold headers, and clean bullet points.
-        2. STYLISH PRESENTATION: Organize information clearly. If providing songs or data, ALWAYS use an MKDN Table.
-        3. FONT & TONE: Use a classy, professional, and helpful tone.
+        1. FACTUAL HONESTY: Only claim an event is 'saved' if the Executor successfully ran the tool. If the workflow failed or asked a question, reflect that honestly.
+        2. USE RICH MARKDOWN: Use tables for lists, bold headers, and clean bullet points.
+        3. STYLISH PRESENTATION: Organize information clearly. If providing songs or data, ALWAYS use an MKDN Table.
         4. End your message with exactly: TERMINATE"""
     )
 
