@@ -16,14 +16,17 @@ async def process_message(msg_payload: dict):
         return
 
     # 2. Build the AutoGen Team
-    team = build_orchestrai_team()
+    team = build_orchestrai_team(session_id)
 
     # 3. Restore memory if resuming
     if db_state.get("autogen_state"):
         await team.load_state(db_state["autogen_state"])
 
     # 4. Determine Task
-    task_input = msg_payload.get("prompt") if action == "START" else msg_payload.get("feedback")
+    if action in ["START", "CHAT"]:
+        task_input = msg_payload.get("prompt")
+    else:
+        task_input = msg_payload.get("feedback")
 
     # 5. Run the Team
     try:

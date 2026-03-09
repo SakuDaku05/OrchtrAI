@@ -5,6 +5,9 @@ import {
   MessageSquare, Image as ImageIcon, Code, Sparkles, Plus,
   Paperclip, Mic, Share, User, LayoutDashboard, Database
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 
 const systemCss = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -402,6 +405,57 @@ export default function App() {
   const [sessionActive, setSessionActive] = useState(false);
   const [sessionId, setSessionId] = useState(null);
   const [chat, setChat] = useState([]);
+  const [sessionHistory, setSessionHistory] = useState([]);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const loadHistory = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/history');
+      const data = await res.json();
+      setSessionHistory(data.sessions || []);
+    } catch (e) {
+      console.error("Failed to load history", e);
+    }
+  };
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistoricalSession = async (id) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/workflow/${id}`);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      setSessionId(data.session_id);
+      setSessionActive(true);
+      setIsProcessing(data.status === 'ACTIVE');
+      setApprovalPending(data.status === 'PAUSED_FOR_HITL');
+      setWorkflowCompleted(data.status === 'COMPLETED' || data.status === 'FAILED');
+
+      const mappedChat = (data.chat_history || [])
+        .filter(item => item.role === 'user' || item.agent === 'Finalizer')
+        .map((item, idx) => ({
+          id: idx,
+          role: item.role === 'user' ? 'user' : 'ai',
+          agent: item.agent,
+          content: item.content.replace('STATUS: PENDING_APPROVAL', '').trim()
+        }));
+      setChat(mappedChat);
+
+      const mappedLogs = (data.chat_history || []).map(item => ({
+        agent: item.agent,
+        msg: item.content
+      }));
+      setLogs(mappedLogs);
+    } catch (e) {
+      console.error("Failed to load session", e);
+    }
+  };
 
   // Mission Control State
   const [tasks, setTasks] = useState([]);
@@ -435,6 +489,16 @@ export default function App() {
           }));
           setLogs(mappedLogs);
 
+          const mappedChat = (data.chat_history || [])
+            .filter(item => item.role === 'user' || item.agent === 'Finalizer')
+            .map((item, idx) => ({
+              id: idx,
+              role: item.role === 'user' ? 'user' : 'ai',
+              agent: item.agent,
+              content: item.content.replace('STATUS: PENDING_APPROVAL', '').trim()
+            }));
+          setChat(mappedChat);
+
           if (data.status === 'PAUSED_FOR_HITL' && !approvalPending && !workflowCompleted) {
             setApprovalPending(true);
             setIsProcessing(false);
@@ -442,13 +506,8 @@ export default function App() {
             setWorkflowCompleted(true);
             setIsProcessing(false);
             setApprovalPending(false);
-
-            // Add the final agent message to the main chat
-            setChat(prev => {
-              const withoutOldAiMsg = prev.filter(m => m.role === 'user');
-              const finalMsgText = data.status === 'COMPLETED' ? "Workflow completed successfully." : "Workflow failed.";
-              return [...withoutOldAiMsg, { id: Date.now(), role: 'ai', content: finalMsgText }];
-            });
+            // Refresh history sidebar when a session finishes
+            loadHistory();
           }
         } catch (e) {
           console.error("Polling error:", e);
@@ -457,6 +516,114 @@ export default function App() {
     }
     return () => clearInterval(interval);
   }, [sessionActive, sessionId, isProcessing, approvalPending, workflowCompleted]);
+
+  // Speech Recognition Setup
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+
+      recognitionRef.current.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(prev => (prev ? prev + ' ' : '') + transcript);
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error("Speech recognition error", event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  };
+
+  const continueWorkflow = async () => {
+    if (!input.trim() || isProcessing) return;
+
+    const currentInput = input;
+    setChat(prev => [...prev, { id: Date.now(), role: 'user', content: currentInput }]);
+    setInput('');
+    setIsProcessing(true);
+    setLogs(prev => [...prev, { agent: 'System', msg: 'Submitting follow-up prompt to existing session...' }]);
+    setApprovalPending(false);
+    setWorkflowCompleted(false);
+
+    try {
+      const res = await fetch('http://localhost:8000/api/workflow/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, message: currentInput })
+      });
+      if (!res.ok) throw new Error("Failed to send message");
+    } catch (e) {
+      setLogs(prev => [...prev, { agent: 'System', msg: `Failed to send message: ${e.message}` }]);
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (sessionActive && sessionId) {
+      continueWorkflow();
+    } else {
+      startWorkflow();
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    let targetSessionId = sessionId;
+    if (!targetSessionId) {
+      targetSessionId = "ORCH-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+      setSessionId(targetSessionId);
+      setSessionActive(true);
+      setLogs([{ agent: 'System', msg: `Session initialized for document upload: ${targetSessionId}` }]);
+    }
+
+    setIsUploading(true);
+    setChat(prev => [...prev, { id: Date.now(), role: 'user', content: `[Uploading Document: ${file.name}...]` }]);
+
+    const formData = new FormData();
+    formData.append('session_id', targetSessionId);
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('http://localhost:8000/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setChat(prev => prev.map(m => m.content.includes(file.name) ? { ...m, content: `[Uploaded & Indexed: ${file.name} (${data.chunks_processed} pages)]` } : m));
+      } else {
+        throw new Error(data.detail || data.message || "Upload failed");
+      }
+    } catch (err) {
+      setChat(prev => prev.map(m => m.content.includes(file.name) ? { ...m, content: `[Failed: ${file.name} - ${err.message}]` } : m));
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleStarterClick = (text) => {
     setInput(text);
@@ -542,7 +709,23 @@ export default function App() {
           </button>
 
           <div className="nav-group">
-            <div className="nav-item active"><MessageSquare size={16} /> Orchestration Hub</div>
+            <div className="nav-item active"><MessageSquare size={16} /> Current Session</div>
+          </div>
+
+          <div className="sidebar-title" style={{ marginTop: '20px', padding: '0 12px', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 600 }}>Recent Workflows</div>
+          <div className="history-list" style={{ flex: 1, overflowY: 'auto' }}>
+            {sessionHistory.map(session => (
+              <div
+                key={session.session_id}
+                className="nav-item"
+                style={{ opacity: 0.8, cursor: 'pointer', marginBottom: '4px' }}
+                onClick={() => loadHistoricalSession(session.session_id)}
+              >
+                <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '13px' }}>
+                  {session.initial_prompt}
+                </div>
+              </div>
+            ))}
           </div>
         </aside>
 
@@ -581,13 +764,15 @@ export default function App() {
             ) : (
               <div className="chat-container">
                 {chat.map(msg => (
-                  <div key={msg.id} className="message">
+                  <div key={msg.id} className="message" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
                     <div className={`msg-avatar ${msg.role}`}>
                       {msg.role === 'user' ? <User size={16} /> : <BrainCircuit size={16} />}
                     </div>
                     <div className="msg-content">
-                      <div className="msg-author">{msg.role === 'user' ? 'You' : 'OrchestrAI System'}</div>
-                      <div className="msg-bubble">{msg.content}</div>
+                      <div className="msg-author">{msg.role === 'user' ? 'You' : (msg.agent || 'OrchestrAI System')}</div>
+                      <div className="msg-bubble markdown-body" style={{ whiteSpace: msg.role === 'user' ? 'pre-wrap' : 'normal', fontFamily: 'inherit' }}>
+                        {msg.role === 'user' ? msg.content : <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{msg.content}</ReactMarkdown>}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -612,18 +797,23 @@ export default function App() {
               </div>
             </div>
             <div className="input-row">
-              <button className="icon-btn"><Paperclip size={18} /></button>
+              <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} accept=".txt,.pdf,.md,.csv" />
+              <button className="icon-btn" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                <Paperclip size={18} />
+              </button>
               <input
                 type="text"
                 className="input-field"
                 placeholder="Declare workflow objective here..."
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && startWorkflow()}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                 disabled={isProcessing}
               />
-              <button className="icon-btn"><Mic size={18} /></button>
-              <button className="send-btn" onClick={startWorkflow} disabled={!input.trim() || isProcessing}>
+              <button className="icon-btn" onClick={toggleListening} title={isListening ? "Listening..." : "Click to speak"}>
+                <Mic size={18} color={isListening ? "var(--danger)" : "var(--text-secondary)"} />
+              </button>
+              <button className="send-btn" onClick={handleSubmit} disabled={!input.trim() || isProcessing}>
                 <Send size={16} />
               </button>
             </div>

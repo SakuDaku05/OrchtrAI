@@ -19,3 +19,7 @@ class ApprovalRequest(BaseModel):
     session_id: str
     approved: bool
     feedback: Optional[str] = None
+
+class ChatRequest(BaseModel):
+    session_id: str
+    message: str = Field(..., description="The user's follow-up message")
