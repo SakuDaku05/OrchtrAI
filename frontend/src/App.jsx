@@ -3,7 +3,7 @@ import {
   Search, ShieldCheck, BrainCircuit, Check, X, Send, Clock,
   FileText, Calendar, TerminalSquare, AlertCircle, ChevronDown,
   MessageSquare, Image as ImageIcon, Code, Sparkles, Plus,
-  Paperclip, Mic, Share, User, LayoutDashboard, Database, Settings, Trash2, Info, Link
+  Paperclip, Mic, Share, User, LayoutDashboard, Database, Settings, Trash2, Info, Link, Music
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -17,7 +17,7 @@ const cleanContent = (raw = '') =>
     .trim();
 
 const systemCss = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
 
   :root {
     --bg-main: #fcfcfd;
@@ -34,10 +34,96 @@ const systemCss = `
     --success: #10b981;
     --danger: #ef4444;
     --font-sans: 'Inter', sans-serif;
+    --font-heading: 'Outfit', sans-serif;
     --font-mono: 'JetBrains Mono', Consolas, monospace;
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  }
+
+  /* --- MARKDOWN STYLING --- */
+  .markdown-body {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text-primary);
+  }
+  .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+    font-family: var(--font-heading);
+    color: var(--accent-dark);
+    margin-top: 24px;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .markdown-body h1 { font-size: 22px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+  .markdown-body h2 { font-size: 18px; }
+  .markdown-body h3 { font-size: 16px; }
+
+  .markdown-body p { margin-bottom: 16px; }
+  .markdown-body strong { font-weight: 600; color: var(--accent-dark); }
+  
+  .markdown-body ul, .markdown-body ol {
+    margin-bottom: 16px;
+    padding-left: 24px;
+  }
+  .markdown-body li { margin-bottom: 6px; }
+
+  .markdown-body table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 16px 0;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+  }
+  .markdown-body th {
+    background: #f8fafc;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .markdown-body td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+  .markdown-body tr:last-child td { border-bottom: none; }
+  .markdown-body tr:hover td { background: #fcfcfd; }
+
+  .markdown-body blockquote {
+    border-left: 4px solid var(--accent-primary);
+    padding: 8px 16px;
+    color: var(--text-secondary);
+    background: #f0f7ff;
+    border-radius: 4px;
+    margin: 16px 0;
+  }
+
+  .markdown-body code {
+    font-family: var(--font-mono);
+    background: #f1f5f9;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: #ef4444;
+  }
+  .markdown-body pre {
+    background: #0f172a;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 16px 0;
+  }
+  .markdown-body pre code {
+    background: transparent;
+    padding: 0;
+    color: #e2e8f0;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -442,7 +528,7 @@ export default function App() {
 
   const fetchAvailableMcps = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/mcp');
+      const res = await fetch('http://127.0.0.1:8000/api/mcp');
       const data = await res.json();
       setAvailableMcps(data.configs || []);
     } catch (e) {
@@ -456,7 +542,7 @@ export default function App() {
 
   const loadHistory = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/history');
+      const res = await fetch('http://127.0.0.1:8000/api/history');
       const data = await res.json();
       console.log("History Fetched:", data.sessions);
       setSessionHistory(data.sessions || []);
@@ -471,7 +557,7 @@ export default function App() {
 
   const loadHistoricalSession = async (id) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/workflow/${id}`);
+      const res = await fetch(`http://127.0.0.1:8000/api/workflow/${id}`);
       if (!res.ok) return;
       const data = await res.json();
 
@@ -481,8 +567,21 @@ export default function App() {
       setApprovalPending(data.status === 'PAUSED_FOR_HITL');
       setWorkflowCompleted(data.status === 'COMPLETED' || data.status === 'FAILED');
 
+      const hasFinalizer = (data.chat_history || []).some(m => m.agent === 'Finalizer');
       const mappedChat = (data.chat_history || [])
-        .filter(item => item.role === 'user' || item.agent === 'Finalizer' || (!item.role && item.agent))
+        .filter(item => {
+          const isUser = item.role === 'user' || item.agent === 'User';
+          const isFinalizer = item.agent === 'Finalizer';
+          const isSystem = item.agent === 'System';
+
+          if (hasFinalizer) {
+            // Show only the "Outcome" (User, Finalizer, System)
+            return isUser || isFinalizer || isSystem;
+          }
+          // Fallback: Show all agents while still in progress
+          const isAgent = ['Planner', 'Researcher', 'Executor', 'Reviewer'].includes(item.agent);
+          return isUser || isAgent || isSystem || (!item.role && item.agent);
+        })
         .map((item, idx) => {
           const isUser = item.role === 'user' || item.agent === 'User';
           return {
@@ -529,7 +628,7 @@ export default function App() {
     if (sessionActive && sessionId && (isProcessing || approvalPending)) {
       interval = setInterval(async () => {
         try {
-          const res = await fetch(`http://localhost:8000/api/workflow/${sessionId}`);
+          const res = await fetch(`http://127.0.0.1:8000/api/workflow/${sessionId}`);
           if (!res.ok) return;
           const data = await res.json();
 
@@ -540,21 +639,31 @@ export default function App() {
           setLogs(mappedLogs);
 
           const allHistory = data.chat_history || [];
-          // Show: user messages + every Finalizer message
-          // Also show the very last agent message per run if Finalizer didn't respond yet
-          const finalizerMsgs = new Set();
+          const hasFinalizer = allHistory.some(m => m.agent === 'Finalizer');
+
           const mappedChat = allHistory
             .filter(item => {
-              if (item.role === 'user') return true;
-              if (item.agent === 'Finalizer') { finalizerMsgs.add(item); return true; }
-              return false;
+              const isUser = item.role === 'user' || item.agent === 'User';
+              const isFinalizer = item.agent === 'Finalizer';
+              const isSystem = item.agent === 'System';
+
+              if (hasFinalizer) {
+                // Show only the "Outcome" (User, Finalizer, System)
+                return isUser || isFinalizer || isSystem;
+              }
+              // Fallback: Show all agents while still in progress
+              const isAgent = ['Planner', 'Researcher', 'Executor', 'Reviewer'].includes(item.agent);
+              return isUser || isAgent || isSystem || (!item.role && item.agent);
             })
-            .map((item, idx) => ({
-              id: idx,
-              role: item.role === 'user' ? 'user' : 'ai',
-              agent: item.agent,
-              content: cleanContent(item.content)
-            }));
+            .map((item, idx) => {
+              const isUser = item.role === 'user' || item.agent === 'User';
+              return {
+                id: idx,
+                role: isUser ? 'user' : 'ai',
+                agent: item.agent || (item.role === 'user' ? 'User' : 'Assistant'),
+                content: cleanContent(item.content)
+              };
+            });
           setChat(mappedChat);
 
           if (data.status === 'PAUSED_FOR_HITL' && !approvalPending && !workflowCompleted) {
@@ -625,7 +734,7 @@ export default function App() {
     setWorkflowCompleted(false);
 
     try {
-      const res = await fetch('http://localhost:8000/api/workflow/chat', {
+      const res = await fetch('http://127.0.0.1:8000/api/workflow/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId, message: currentInput })
@@ -668,7 +777,7 @@ export default function App() {
     formData.append('file', file);
 
     try {
-      const res = await fetch('http://localhost:8000/api/upload', {
+      const res = await fetch('http://127.0.0.1:8000/api/upload', {
         method: 'POST',
         body: formData
       });
@@ -705,13 +814,14 @@ export default function App() {
     setWorkflowCompleted(false);
 
     try {
-      const res = await fetch('http://localhost:8000/api/workflow/start', {
+      const res = await fetch('http://127.0.0.1:8000/api/workflow/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: currentInput,
           session_id: sessionId,
-          enabled_mcps: selectedMcps
+          enabled_mcps: selectedMcps,
+          hitl_enabled: toggles.humanApproval
         })
       });
       const data = await res.json();
@@ -728,7 +838,7 @@ export default function App() {
       setApprovalPending(false);
       setIsProcessing(true);
       setLogs(prev => [...prev, { agent: 'System', msg: 'HITL Override: APPROVED. Sending to backend...' }]);
-      await fetch('http://localhost:8000/api/workflow/approve', {
+      await fetch('http://127.0.0.1:8000/api/workflow/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId, approved: true, feedback: '' })
@@ -923,19 +1033,24 @@ export default function App() {
                 <ShieldCheck size={12} /> HITL Approval Required
               </div>
               <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }} />
-              {availableMcps.map(mcp => (
-                <div
-                  key={mcp.id}
-                  className={`toggle-chip ${selectedMcps.includes(mcp.id) ? 'active' : ''}`}
-                  onClick={() => {
-                    setSelectedMcps(prev =>
-                      prev.includes(mcp.id) ? prev.filter(id => id !== mcp.id) : [...prev, mcp.id]
-                    );
-                  }}
-                >
-                  <Link size={12} /> {mcp.name}
-                </div>
-              ))}
+              {availableMcps.map(mcp => {
+                const isSpotify = mcp.service?.toLowerCase() === 'spotify' || mcp.name?.toLowerCase().includes('spotify');
+                const isActive = selectedMcps.includes(mcp.id);
+                return (
+                  <div
+                    key={mcp.id}
+                    className={`toggle-chip ${isActive ? 'active' : ''}`}
+                    style={isSpotify && isActive ? { borderColor: '#1db954', color: '#1db954', background: '#f0fdf4' } : {}}
+                    onClick={() => {
+                      setSelectedMcps(prev =>
+                        prev.includes(mcp.id) ? prev.filter(id => id !== mcp.id) : [...prev, mcp.id]
+                      );
+                    }}
+                  >
+                    {isSpotify ? <Music size={12} /> : <Link size={12} />} {mcp.name}
+                  </div>
+                );
+              })}
               {availableMcps.length === 0 && (
                 <div className="toggle-chip" onClick={() => window.location.href = '/mcp'} style={{ borderStyle: 'dashed' }}>
                   <Plus size={12} /> Add MCP

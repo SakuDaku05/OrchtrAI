@@ -59,8 +59,11 @@ async def start_workflow(request: TaskRequest):
         "session_id": session_id,
         "status": "ACTIVE",
         "original_prompt": request.prompt,
-        "chat_history": [],
+        "chat_history": [
+            {"agent": "User", "role": "user", "content": request.prompt}
+        ],
         "enabled_mcps": enabled_mcps,
+        "hitl_enabled": request.hitl_enabled,
         "autogen_state": None,
         "created_at": datetime.datetime.utcnow().isoformat(),
         "updated_at": datetime.datetime.utcnow().isoformat()
@@ -134,6 +137,8 @@ async def send_chat_message(request: ChatRequest):
         raise HTTPException(status_code=404, detail="Session not found")
         
     state["status"] = "ACTIVE"
+    if "chat_history" not in state: state["chat_history"] = []
+    state["chat_history"].append({"agent": "User", "role": "user", "content": request.message})
     await db_service.save_state(state)
     
     # Send CHAT command to Service Bus

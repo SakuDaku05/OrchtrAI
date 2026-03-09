@@ -16,11 +16,15 @@ class CosmosDBService:
         self.vector_container = None
 
     async def init_db(self):
+        print(f"DEBUG: Initializing Cosmos DB connection to {settings.COSMOS_DB_ENDPOINT}")
         self.db = await self.client.create_database_if_not_exists(id=self.db_name)
+        print(f"DEBUG: Database '{self.db_name}' ready.")
+        
         self.container = await self.db.create_container_if_not_exists(
             id=self.container_name,
             partition_key=PartitionKey(path="/session_id")
         )
+        print(f"DEBUG: Container '{self.container_name}' ready.")
 
         # Document Chunks Container with Vector Indexing
         # dimensions=384 for all-MiniLM-L6-v2
@@ -48,6 +52,7 @@ class CosmosDBService:
                 vector_embedding_policy=vector_embedding_policy
             )
             self.use_native_vector_search = True
+            print("DEBUG: Container 'document_chunks' with vector search ready.")
         except CosmosHttpResponseError as e:
             if "capability has not been enabled" in str(e):
                 print("WARNING: Vector capability disabled on Cosmos. Falling back to python computation.")
@@ -64,6 +69,7 @@ class CosmosDBService:
             id="mcp_configs",
             partition_key=PartitionKey(path="/id")
         )
+        print("DEBUG: Container 'mcp_configs' ready.")
 
     async def save_state(self, state_dict: dict):
         state_dict["updated_at"] = datetime.datetime.utcnow().isoformat()
@@ -123,7 +129,7 @@ class CosmosDBService:
         except Exception as e:
             print(f"Error deleting state {session_id}: {str(e)}")
 
-    async def get_recent_sessions(self, limit: int = 20) -> list:
+    async def get_recent_sessions(self, limit: int = None) -> list:
         # Cross-partition query to grab all session metadata
         query = "SELECT * FROM c"
         results = []
@@ -148,7 +154,9 @@ class CosmosDBService:
             
             # Sort descending by updated_at
             results.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
-            return results[:limit]
+            if limit:
+                return results[:limit]
+            return results
         except Exception as e:
             print(f"Error fetching history: {str(e)}")
             return []

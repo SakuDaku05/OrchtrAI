@@ -5,15 +5,15 @@ from pydantic import BaseModel, Field
 import json
 
 # --- 1. Free Web Search Tool (For Researcher) ---
-class SearchParams(BaseModel):
-    query: str = Field(..., description="The search query to look up on the internet.")
-    max_results: int = Field(default=3, description="Number of results to return.")
-
-async def web_search(params: SearchParams) -> str:
+async def web_search(query: str, max_results: int = 5) -> str:
     """Performs a live web search using DuckDuckGo."""
     try:
-        results = DDGS().text(params.query, max_results=params.max_results)
-        return json.dumps(list(results))
+        results = []
+        with DDGS() as ddgs:
+            # text() is the new standard method in duckduckgo_search
+            for r in ddgs.text(query, max_results=max_results):
+                results.append(r)
+        return json.dumps(results)
     except Exception as e:
         return f"Search failed: {str(e)}"
 

@@ -6,15 +6,19 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from backend.config import settings
 from backend.tools import duckduckgo_tool, calendar_tool
 
-def build_orchestrai_team():
+def build_orchestrai_team(extra_tools: list = None, hitl_enabled: bool = True):
     # model_info is required for non-OpenAI model names
     from autogen_core.models import ModelInfo
 
+    if extra_tools is None:
+        extra_tools = []
+
     def make_client(api_key: str) -> OpenAIChatCompletionClient:
         return OpenAIChatCompletionClient(
-            model=settings.GEMINI_MODEL,
+            # Use Groq for speed and reliable tool use
+            model=settings.GROQ_MODEL_1,
             api_key=api_key,
-            base_url=settings.GEMINI_BASE_URL,
+            base_url=settings.GROQ_BASE_URL,
             model_info=ModelInfo(
                 vision=False,
                 function_calling=True,
@@ -24,11 +28,11 @@ def build_orchestrai_team():
             ),
         )
 
-    # Each agent gets its own key to distribute rate limits
-    planner_client   = make_client(settings.GEMINI_API_KEY_PLANNER)
-    researcher_client = make_client(settings.GEMINI_API_KEY_RESEARCHER)
-    executor_client  = make_client(settings.GEMINI_API_KEY_EXECUTOR)
-    reviewer_client  = make_client(settings.GEMINI_API_KEY_REVIEWER)
+    # Use GROQ keys to distribute rate limits
+    planner_client   = make_client(settings.GROQ_API_KEY_1)
+    researcher_client = make_client(settings.GROQ_API_KEY_1)
+    executor_client  = make_client(settings.GROQ_API_KEY_2)
+    reviewer_client  = make_client(settings.GROQ_API_KEY_2)
 
     # -- Define Agents --
     planner = AssistantAgent(
@@ -41,31 +45,50 @@ def build_orchestrai_team():
         name="Researcher",
         model_client=researcher_client,
         tools=[duckduckgo_tool],
-        system_message="You are the Context Gatherer. Use search tools to find facts. Return clear data for the Executor to use."
+        system_message="""You are the Context Gatherer. Use search tools to find facts. Return clear data for the Executor to use.
+        NOTE: If search returns no results, try broader or different keywords before giving up."""
     )
 
+    # Executor gets standard tools + any dynamic MCP tools
     executor = AssistantAgent(
         name="Executor",
         model_client=executor_client,
-        tools=[calendar_tool],
+        tools=[calendar_tool] + extra_tools,
         system_message="You are the Executor. You execute APIs based on the Planner's instructions and Researcher's data."
     )
+
+    # Determine reviewer instruction based on HITL setting
+    hitl_instruction = "IMPORTANT: If the work requires human approval, output exactly: STATUS: PENDING_APPROVAL" if hitl_enabled else "NOTE: Human-In-The-Loop approval is DISABLED. Proceed immediately to approval if the executor's output is factually correct."
 
     reviewer = AssistantAgent(
         name="Reviewer",
         model_client=reviewer_client,
-        system_message="You are Quality Control. Review the Executor's output. If correct and ready for human approval, strictly output exactly 'STATUS: PENDING_APPROVAL'. If flawed, provide feedback for the Executor."
+        system_message=f"""You are Quality Control.
+        1. {hitl_instruction}
+        2. If the work is already approved or complete, output exactly: Quality Control: approved. Finalizer, please output the final summary.
+        3. If there are errors, provide feedback to the Executor."""
+    )
+
+    finalizer = AssistantAgent(
+        name="Finalizer",
+        model_client=make_client(settings.GROQ_API_KEY_2),
+        system_message="""You are the Presenter. Convert technical results into a premium, beautiful summary.
+        1. USE RICH MARKDOWN: Use tables for lists, bold headers, and clean bullet points.
+        2. STYLISH PRESENTATION: Organize information clearly. If providing songs or data, ALWAYS use an MKDN Table.
+        3. FONT & TONE: Use a classy, professional, and helpful tone.
+        4. End your message with exactly: TERMINATE"""
     )
 
     # -- Terminations --
-    # Stop if the Reviewer calls for HITL, or as a fallback stop after 15 messages to save tokens.
+    # Stop if Reviewer asks for HITL, or if Finalizer outputs TERMINATE.
     hitl_termination = TextMentionTermination("STATUS: PENDING_APPROVAL")
-    fallback_termination = MaxMessageTermination(max_messages=15)
-    termination_condition = hitl_termination | fallback_termination
+    done_termination = TextMentionTermination("TERMINATE")
+    fallback_termination = MaxMessageTermination(max_messages=25)
+    termination_condition = hitl_termination | done_termination | fallback_termination
 
     # -- Create Team --
     team = RoundRobinGroupChat(
-        participants=[planner, researcher, executor, reviewer],
+        participants=[planner, researcher, executor, reviewer, finalizer],
         termination_condition=termination_condition
     )
     

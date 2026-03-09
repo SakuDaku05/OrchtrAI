@@ -50,38 +50,116 @@ class SpotifyConnector(BaseConnector):
     async def get_tools(self) -> List[Dict[str, Any]]:
         return [
             {
-                "name": "spotify_search",
-                "description": "Search for tracks, artists, or albums on Spotify.",
+                "name": "searchTrack",
+                "description": "Search for tracks on Spotify.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "q": {"type": "string", "description": "Search query"},
-                        "type": {"type": "string", "enum": ["track", "artist", "album"], "description": "Type of item to search for"},
+                        "query": {"type": "string", "description": "Search query"},
                         "limit": {"type": "integer", "default": 5}
                     },
-                    "required": ["q", "type"]
+                    "required": ["query"]
                 }
             },
             {
-                "name": "spotify_get_item",
-                "description": "Get detailed information about a specific track, album, or playlist by ID.",
+                "name": "searchArtist",
+                "description": "Search for artists on Spotify.",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "id": {"type": "string", "description": "Spotify ID of the item"},
-                        "type": {"type": "string", "enum": ["track", "album", "playlist"], "description": "Type of item"}
+                        "query": {"type": "string", "description": "Search query"},
+                        "limit": {"type": "integer", "default": 5}
                     },
-                    "required": ["id", "type"]
+                    "required": ["query"]
                 }
             },
             {
-                "name": "spotify_browse_featured",
-                "description": "Get a list of featured playlists on Spotify.",
+                "name": "searchAlbum",
+                "description": "Search for albums on Spotify.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Search query"},
+                        "limit": {"type": "integer", "default": 5}
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
+                "name": "getTrack",
+                "description": "Get detailed information about a specific track by ID.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string", "description": "Spotify ID of the track"}
+                    },
+                    "required": ["id"]
+                }
+            },
+            {
+                "name": "getAlbum",
+                "description": "Get detailed information about a specific album by ID.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string", "description": "Spotify ID of the album"}
+                    },
+                    "required": ["id"]
+                }
+            },
+            {
+                "name": "browseCategories",
+                "description": "Get a list of categories on Spotify.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "limit": {"type": "integer", "default": 10}
                     }
+                }
+            },
+            {
+                "name": "featuredPlaylists",
+                "description": "Get a list of featured playlists on Spotify.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "limit": {"type": "integer", "default": 10},
+                        "country": {"type": "string", "description": "ISO 3166-1 alpha-2 country code (e.g. US, IN)"}
+                    }
+                }
+            },
+            {
+                "name": "browseNewReleases",
+                "description": "Get a list of new album releases.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "limit": {"type": "integer", "default": 10},
+                        "country": {"type": "string"}
+                    }
+                }
+            },
+            {
+                "name": "getArtistTopTracks",
+                "description": "Get an artist's top tracks.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "artist_id": {"type": "string", "description": "Spotify ID of the artist"},
+                        "market": {"type": "string", "default": "US"}
+                    },
+                    "required": ["artist_id"]
+                }
+            },
+            {
+                "name": "getPlaylist",
+                "description": "Get details of a specific public playlist by ID.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "playlist_id": {"type": "string", "description": "Spotify ID of the playlist"}
+                    },
+                    "required": ["playlist_id"]
                 }
             }
         ]
@@ -93,27 +171,74 @@ class SpotifyConnector(BaseConnector):
         headers = {"Authorization": f"Bearer {self.access_token}"}
         
         async with aiohttp.ClientSession() as session:
-            if tool_name == "spotify_search":
-                q = arguments.get("q")
-                search_type = arguments.get("type")
+            if tool_name == "searchTrack":
+                query = arguments.get("query")
                 limit = arguments.get("limit", 5)
-                url = f"{self.base_url}/search?q={q}&type={search_type}&limit={limit}"
+                url = f"{self.base_url}/search?q={query}&type=track&limit={limit}"
+                async with session.get(url, headers=headers) as resp:
+                    return await resp.json()
+
+            elif tool_name == "searchArtist":
+                query = arguments.get("query")
+                limit = arguments.get("limit", 5)
+                url = f"{self.base_url}/search?q={query}&type=artist&limit={limit}"
+                async with session.get(url, headers=headers) as resp:
+                    return await resp.json()
+
+            elif tool_name == "searchAlbum":
+                query = arguments.get("query")
+                limit = arguments.get("limit", 5)
+                url = f"{self.base_url}/search?q={query}&type=album&limit={limit}"
                 async with session.get(url, headers=headers) as resp:
                     return await resp.json()
                     
-            elif tool_name == "spotify_get_item":
-                item_id = arguments.get("id")
-                item_type = arguments.get("type")
-                # playlist uses plural 'playlists' in endpoint but others use singular? 
-                # Actually: tracks/{id}, albums/{id}, playlists/{id}
-                endpoint = f"{item_type}s" if item_type != "playlist" else "playlists"
-                url = f"{self.base_url}/{endpoint}/{item_id}"
+            elif tool_name == "getTrack":
+                item_id = arguments.get("id") or arguments.get("track_id")
+                url = f"{self.base_url}/tracks/{item_id}"
                 async with session.get(url, headers=headers) as resp:
                     return await resp.json()
-                    
-            elif tool_name == "spotify_browse_featured":
+
+            elif tool_name == "getAlbum":
+                item_id = arguments.get("id") or arguments.get("album_id")
+                url = f"{self.base_url}/albums/{item_id}"
+                async with session.get(url, headers=headers) as resp:
+                    return await resp.json()
+
+            elif tool_name == "browseCategories":
                 limit = arguments.get("limit", 10)
+                url = f"{self.base_url}/browse/categories?limit={limit}"
+                async with session.get(url, headers=headers) as resp:
+                    return await resp.json()
+                    
+            elif tool_name == "featuredPlaylists":
+                limit = arguments.get("limit", 10)
+                country = arguments.get("country", "")
                 url = f"{self.base_url}/browse/featured-playlists?limit={limit}"
+                if country: url += f"&country={country}"
+                async with session.get(url, headers=headers) as resp:
+                    data = await resp.json()
+                    if resp.status == 403:
+                        return {"error": "403 Forbidden. This endpoint may require a User Token or is restricted in your region with Client Credentials."}
+                    return data
+
+            elif tool_name == "browseNewReleases":
+                limit = arguments.get("limit", 10)
+                country = arguments.get("country", "")
+                url = f"{self.base_url}/browse/new-releases?limit={limit}"
+                if country: url += f"&country={country}"
+                async with session.get(url, headers=headers) as resp:
+                    return await resp.json()
+
+            elif tool_name == "getArtistTopTracks":
+                artist_id = arguments.get("artist_id")
+                market = arguments.get("market", "US")
+                url = f"{self.base_url}/artists/{artist_id}/top-tracks?market={market}"
+                async with session.get(url, headers=headers) as resp:
+                    return await resp.json()
+
+            elif tool_name == "getPlaylist":
+                item_id = arguments.get("playlist_id") or arguments.get("id")
+                url = f"{self.base_url}/playlists/{item_id}"
                 async with session.get(url, headers=headers) as resp:
                     return await resp.json()
                     
