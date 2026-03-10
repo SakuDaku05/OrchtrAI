@@ -10,7 +10,6 @@ const Integrations = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
 
-    // New config form state
     const [newService, setNewService] = useState('spotify');
     const [newName, setNewName] = useState('Spotify Music');
     const [clientId, setClientId] = useState('');
@@ -91,7 +90,6 @@ const Integrations = () => {
                 <main className="flex-1 overflow-y-auto p-6 md:p-8">
                     <div className="max-w-5xl mx-auto space-y-10 py-4">
 
-                        {/* Page Header */}
                         <div className="flex items-center justify-between bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
                             <div className="flex items-start gap-5">
                                 <div className="bg-black text-white p-3 rounded-xl shadow-sm mt-1">
@@ -118,7 +116,6 @@ const Integrations = () => {
                             </button>
                         </div>
 
-                        {/* Add Integration Form */}
                         {isAdding && (
                             <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm animate-in fade-in slide-in-from-top-4">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
@@ -190,7 +187,6 @@ const Integrations = () => {
                             </div>
                         )}
 
-                        {/* Active Integrations Section */}
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 w-full">
                             <div className="flex items-center gap-3 mb-8">
                                 <div className="bg-gray-100 p-2 rounded-lg">
@@ -229,7 +225,6 @@ const Integrations = () => {
                                                     </div>
                                                 </div>
 
-                                                {/* Fixed syntax for the toggle switch interpolation */}
                                                 <button
                                                     onClick={() => handleToggleState(config)}
                                                     className={`w-12 h-7 rounded-full transition-colors relative flex items-center border ${config.is_active ? 'bg-emerald-500 border-emerald-600' : 'bg-gray-200 border-gray-300'}`}

@@ -1,0 +1,3 @@
+class OpenAIClientConfiguration(BaseOpenAIClientConfiguration, total=False):
+    organization: str
+    base_url: str

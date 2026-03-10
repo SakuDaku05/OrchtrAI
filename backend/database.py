@@ -1,4 +1,3 @@
-# backend/database.py
 from azure.cosmos.aio import CosmosClient
 from azure.cosmos import PartitionKey
 from azure.cosmos.exceptions import CosmosHttpResponseError
@@ -21,14 +20,12 @@ class CosmosDBService:
         print(f"DEBUG: Initializing Cosmos DB connection to {settings.COSMOS_DB_ENDPOINT}")
         self.db = await self.client.create_database_if_not_exists(id=self.db_name)
         
-        # 1. Main workflow states container (Your original setup)
         self.container = await self.db.create_container_if_not_exists(
             id=self.container_name,
             partition_key=PartitionKey(path="/session_id")
         )
         print(f"DEBUG: Container '{self.container_name}' ready.")
 
-        # 2. Document Chunks Container with Vector Indexing
         vector_embedding_policy = {
             "vectorEmbeddings": [
                 {
@@ -65,21 +62,18 @@ class CosmosDBService:
             else:
                 raise e
 
-        # 3. MCP Configs Container
         self.mcp_container = await self.db.create_container_if_not_exists(
             id="mcp_configs",
             partition_key=PartitionKey(path="/id")
         )
         print("DEBUG: Container 'mcp_configs' ready.")
 
-        # 4. Global Calendar Events Container (Added from friend's code)
         self.calendar_container = await self.db.create_container_if_not_exists(
             id="calendar_events",
             partition_key=PartitionKey(path="/type")
         )
         print("DEBUG: Container 'calendar_events' ready.")
 
-    # --- CORE WORKFLOW STATE METHODS ---
     async def save_state(self, state_dict: dict):
         state_dict["updated_at"] = datetime.datetime.utcnow().isoformat()
         state_dict["id"] = state_dict["session_id"]
@@ -87,10 +81,8 @@ class CosmosDBService:
 
     async def get_state(self, session_id: str) -> dict:
         try:
-            # 1. Try fast read
             return await self.container.read_item(item=session_id, partition_key=session_id)
         except Exception:
-            # 2. Fallback: Cross-partition query by id or session_id
             try:
                 query = "SELECT * FROM c WHERE c.id = @sid OR c.session_id = @sid"
                 parameters = [{"name": "@sid", "value": session_id}]
@@ -109,7 +101,6 @@ class CosmosDBService:
         except Exception as e:
             print(f"Error deleting state {session_id}: {str(e)}")
 
-    # --- USER PROFILE & HISTORY METHODS ---
     async def get_all_workflows(self):
         query = "SELECT c.id, c.session_id, c.status, c.original_prompt, c.created_at, c.updated_at FROM c ORDER BY c.created_at DESC"
         items = self.container.query_items(query=query)
@@ -163,7 +154,6 @@ class CosmosDBService:
             print(f"Error fetching history: {str(e)}")
             return []
 
-    # --- MCP CONFIGURATION METHODS ---
     async def save_mcp_config(self, config: dict):
         await self.mcp_container.upsert_item(body=config)
 
@@ -186,7 +176,6 @@ class CosmosDBService:
         except Exception:
             pass
 
-    # --- CALENDAR METHODS (Added from friend's code) ---
     async def save_calendar_event(self, event: dict):
         if "created_at" not in event:
             event["created_at"] = datetime.datetime.utcnow().isoformat()
@@ -205,7 +194,6 @@ class CosmosDBService:
             print(f"Error fetching calendar: {str(e)}")
             return []
 
-    # --- VECTOR EMBEDDING / RAG METHODS ---
     async def save_chunk(self, session_id: str, chunk_id: str, text: str, embedding: list, metadata: dict = None):
         if metadata is None: metadata = {}
         item = {

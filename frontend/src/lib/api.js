@@ -1,7 +1,5 @@
-// Central API service layer — all calls go through the Vite proxy to localhost:8000
 const BASE_URL = '/api';
 
-// ─── Workflow ───────────────────────────────────────────────────────────────
 
 export async function startWorkflow(prompt, enabled_mcps = []) {
   const res = await fetch(`${BASE_URL}/workflow/start`, {
@@ -14,7 +12,6 @@ export async function startWorkflow(prompt, enabled_mcps = []) {
 }
 
 export function streamWorkflow(sessionId) {
-  // Returns an EventSource; caller is responsible for closing it
   return new EventSource(`${BASE_URL}/workflow/${sessionId}/stream`);
 }
 
@@ -28,7 +25,6 @@ export async function approveWorkflow(sessionId, approved, feedback = '') {
   return res.json();
 }
 
-// ─── History ─────────────────────────────────────────────────────────────────
 
 export async function getHistory() {
   const res = await fetch(`${BASE_URL}/history`);
@@ -51,7 +47,6 @@ export async function deleteWorkflow(sessionId) {
   return res.json();
 }
 
-// ─── Logs ─────────────────────────────────────────────────────────────────────
 
 export async function getRecentLogs() {
   const res = await fetch(`${BASE_URL}/logs/recent`);
@@ -60,7 +55,6 @@ export async function getRecentLogs() {
   return data.logs || []; // array of { session_id, agent, content, type }
 }
 
-// ─── Profile ─────────────────────────────────────────────────────────────────
 
 export async function getProfile() {
   const res = await fetch(`${BASE_URL}/profile`);
@@ -78,7 +72,6 @@ export async function updateProfile(profileData) {
   return res.json();
 }
 
-// ─── MCP Settings ─────────────────────────────────────────────────────────────
 
 export async function getMcpConfigs() {
   const res = await fetch(`${BASE_URL}/mcp`);
@@ -105,9 +98,7 @@ export async function deleteMcpConfig(mcpId) {
   return res.json();
 }
 
-// ─── Calendar ─────────────────────────────────────────────────────────────────
 
-/** Global Calendar Data Retrieval */
 export async function getCalendarEvents() {
     const res = await fetch(`${BASE_URL}/calendar`);
     if (!res.ok) throw new Error('Failed to fetch calendar events');

@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Terminal, MessageSquare, Sparkles, CheckCircle2, Circle, Loader2 } from 'lucide-react';
 
-// Color maps for agent names in the terminal
 const AGENT_COLORS = {
   Planner: 'text-blue-400',
   Researcher: 'text-purple-400',
@@ -11,7 +10,6 @@ const AGENT_COLORS = {
   System: 'text-gray-400',
 };
 
-// Maps the active agent step to task assignments for the task breakdown panel
 const TASK_DEFINITIONS = [
   { id: 1, title: 'Gather context & research', assigned: 'Researcher', activeAt: 1 },
   { id: 2, title: 'Execute and generate output', assigned: 'Executor', activeAt: 2 },
@@ -22,12 +20,10 @@ const TASK_DEFINITIONS = [
 const CommandLine = ({ activeStep = -1, logs = [] }) => {
   const terminalEndRef = useRef(null);
 
-  // Auto-scroll to the bottom of the terminal as new logs arrive
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs.length]);
 
-  // Normalise a log entry's content to a displayable string
   const formatContent = (content) => {
     if (typeof content === 'string') return content;
     if (Array.isArray(content)) {
@@ -45,7 +41,6 @@ const CommandLine = ({ activeStep = -1, logs = [] }) => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full pb-8">
-      {/* ── Agent Communication Terminal ── */}
       <div className="lg:col-span-2 flex flex-col">
         <div className="flex items-center gap-2 mb-3 text-slate-700 font-bold text-sm uppercase tracking-wide">
           <Terminal size={18} />
@@ -88,7 +83,6 @@ const CommandLine = ({ activeStep = -1, logs = [] }) => {
                 </div>
               ))}
 
-              {/* Blinking cursor while still processing */}
               {activeStep >= 0 && activeStep <= 4 && (
                 <div className="flex items-center gap-2 text-slate-500 pt-2 animate-pulse">
                   <div className="w-2 h-4 bg-slate-500" />
@@ -101,7 +95,6 @@ const CommandLine = ({ activeStep = -1, logs = [] }) => {
         </div>
       </div>
 
-      {/* ── Task Breakdown Panel ── */}
       <div className="lg:col-span-1 flex flex-col">
         <div className="flex items-center gap-2 mb-3 text-slate-700 font-bold text-sm uppercase tracking-wide">
           <MessageSquare size={18} />

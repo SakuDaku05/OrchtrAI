@@ -1,0 +1,74 @@
+{
+  "events": [
+    {
+      "id": "EVT-BF473144",
+      "title": "Dinner",
+      "start_time": "2025-03-12T17:00:00",
+      "end_time": null,
+      "description": null,
+      "type": "REMINDER",
+      "created_at": "2026-03-09T19:14:24.566244",
+      "_rid": "W-hQALs7rf0BAAAAAAAAAA==",
+      "_self": "dbs/W-hQAA==/colls/W-hQALs7rf0=/docs/W-hQALs7rf0BAAAAAAAAAA==/",
+      "_etag": "\"34000828-0000-1800-0000-69af1c0f0000\"",
+      "_attachments": "attachments/",
+      "_ts": 1773083663
+    },
+    {
+      "id": "EVT-68CDA552",
+      "title": "Team Meeting",
+      "start_time": "2026-03-11T20:00:00",
+      "end_time": "2026-03-11T21:00:00",
+      "description": "Scheduled meeting - Wednesday, March 11th at 8:00 PM",
+      "type": "MEETING",
+      "created_at": "2026-03-10T08:13:25.049754",
+      "_rid": "W-hQALs7rf0EAAAAAAAAAA==",
+      "_self": "dbs/W-hQAA==/colls/W-hQALs7rf0=/docs/W-hQALs7rf0EAAAAAAAAAA==/",
+      "_etag": "\"020015d2-0000-1800-0000-69afd2a50000\"",
+      "_attachments": "attachments/",
+      "_ts": 1773130405
+    },
+    {
+      "id": "EVT-C717069E",
+      "title": "Dinner",
+      "start_time": "2026-03-12T17:00:00",
+      "end_time": null,
+      "description": null,
+      "type": "MEETING",
+      "created_at": "2026-03-09T19:27:50.400043",
+      "_rid": "W-hQALs7rf0CAAAAAAAAAA==",
+      "_self": "dbs/W-hQAA==/colls/W-hQALs7rf0=/docs/W-hQALs7rf0CAAAAAAAAAA==/",
+      "_etag": "\"3400bb36-0000-1800-0000-69af1f350000\"",
+      "_attachments": "attachments/",
+      "_ts": 1773084469
+    },
+    {
+      "id": "EVT-3A2F5E5F",
+      "title": "Dinner meeting",
+      "start_time": "2026-03-14T20:00:00",
+      "end_time": "2026-03-14T22:00:00",
+      "description": "Dinner meeting with Shashank",
+      "type": "MEETING",
+      "created_at": "2026-03-10T08:18:25.340422",
+      "_rid": "W-hQALs7rf0FAAAAAAAAAA==",
+      "_self": "dbs/W-hQAA==/colls/W-hQALs7rf0=/docs/W-hQALs7rf0FAAAAAAAAAA==/",
+      "_etag": "\"0200d1dc-0000-1800-0000-69afd3d20000\"",
+      "_attachments": "attachments/",
+      "_ts": 1773130706
+    },
+    {
+      "id": "EVT-9DC0C620",
+      "title": "Dinner",
+      "start_time": "2026-03-15T17:00:00",
+      "end_time": null,
+      "description": null,
+      "type": "MEETING",
+      "created_at": "2026-03-10T05:03:10.303256",
+      "_rid": "W-hQALs7rf0DAAAAAAAAAA==",
+      "_self": "dbs/W-hQAA==/colls/W-hQALs7rf0=/docs/W-hQALs7rf0DAAAAAAAAAA==/",
+      "_etag": "\"0100105d-0000-1800-0000-69afa60d0000\"",
+      "_attachments": "attachments/",
+      "_ts": 1773118989
+    }
+  ]
+}

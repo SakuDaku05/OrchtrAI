@@ -1,4 +1,3 @@
-// src/components/HITLModal.jsx
 import React, { useState, useEffect } from 'react';
 import {
     CheckCircle2, AlertTriangle, Sparkles,
@@ -6,7 +5,6 @@ import {
     PartyPopper, X
 } from 'lucide-react';
 
-// ── Formatted Output Renderer ─────────────────────────────────────────────────
 
 function FormattedOutput({ text }) {
     if (!text) return (
@@ -23,7 +21,6 @@ function FormattedOutput({ text }) {
 
         if (trimmed === '') { i++; continue; }
 
-        // Section heading: "**...**" alone OR "## ..."
         if (/^\*\*(.+)\*\*$/.test(trimmed) || /^#{1,3}\s/.test(trimmed)) {
             const label = trimmed.replace(/^\*\*|\*\*$/g, '').replace(/^#+\s/, '');
             elements.push(
@@ -35,7 +32,6 @@ function FormattedOutput({ text }) {
             i++; continue;
         }
 
-        // Numbered item: "1. ..."
         if (/^\d+\.\s/.test(trimmed)) {
             const num = trimmed.match(/^(\d+)/)[1];
             const content = trimmed.replace(/^\d+\.\s/, '');
@@ -51,7 +47,6 @@ function FormattedOutput({ text }) {
             i++; continue;
         }
 
-        // Bullet: "- " / "• " / "* "
         if (/^[-•*]\s/.test(trimmed)) {
             const content = trimmed.replace(/^[-•*]\s/, '');
             const inlined = inlineBold(content, i);
@@ -64,7 +59,6 @@ function FormattedOutput({ text }) {
             i++; continue;
         }
 
-        // Default paragraph with inline bold support
         elements.push(
             <p key={i} className="text-slate-700 text-sm leading-relaxed py-1">
                 {inlineBold(trimmed, i)}
@@ -76,7 +70,6 @@ function FormattedOutput({ text }) {
     return <div className="space-y-0.5">{elements}</div>;
 }
 
-/** Convert **word** inside a string to <strong> spans */
 function inlineBold(text, key) {
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
     if (parts.length === 1) return text;
@@ -88,12 +81,7 @@ function inlineBold(text, key) {
     });
 }
 
-// ── Main Modal ────────────────────────────────────────────────────────────────
 
-/**
- * type = 'hitl'      → Approval required UI (Approve / Request Changes)
- * type = 'completed' → Workflow finished UI  (Start New Task / Close)
- */
 const HITLModal = ({ isOpen, type = 'hitl', output, sessionId, onApprove, onReject, onClose }) => {
     const [view, setView] = useState('review');     // 'review' | 'reject'
     const [feedback, setFeedback] = useState('');
@@ -132,7 +120,6 @@ const HITLModal = ({ isOpen, type = 'hitl', output, sessionId, onApprove, onReje
                 style={{ animation: 'hitlSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1) both' }}
             >
 
-                {/* ── Header ─────────────────────────────────────────────────── */}
                 <div className={`flex items-center gap-4 px-7 py-5 flex-shrink-0 ${isCompleted
                         ? 'bg-gradient-to-r from-emerald-700 to-teal-700'
                         : 'bg-gradient-to-r from-slate-900 to-slate-800'
@@ -156,7 +143,6 @@ const HITLModal = ({ isOpen, type = 'hitl', output, sessionId, onApprove, onReje
                         </p>
                     </div>
 
-                    {/* Status pill */}
                     <div className="ml-auto">
                         {isCompleted ? (
                             <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full font-semibold">
@@ -169,7 +155,6 @@ const HITLModal = ({ isOpen, type = 'hitl', output, sessionId, onApprove, onReje
                         )}
                     </div>
 
-                    {/* Close (only for completed) */}
                     {isCompleted && (
                         <button onClick={onClose} className="ml-2 text-white/50 hover:text-white transition-colors">
                             <X size={20} />
@@ -177,7 +162,6 @@ const HITLModal = ({ isOpen, type = 'hitl', output, sessionId, onApprove, onReje
                     )}
                 </div>
 
-                {/* ── Section label ──────────────────────────────────────────── */}
                 <div className="flex items-center gap-2 px-7 pt-5 pb-2 flex-shrink-0">
                     <Sparkles size={15} className={isCompleted ? 'text-emerald-500' : 'text-indigo-500'} />
                     <span className="font-bold text-xs text-slate-600 uppercase tracking-widest">
@@ -186,9 +170,7 @@ const HITLModal = ({ isOpen, type = 'hitl', output, sessionId, onApprove, onReje
                     <div className="flex-1 h-px bg-gray-100 ml-1" />
                 </div>
 
-                {/* ── Scrollable output area ─────────────────────────────────── */}
                 <div className="flex-1 overflow-y-auto px-7 pb-2">
-                    {/* Output box */}
                     <div className={`border rounded-2xl px-6 py-5 ${isCompleted
                             ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200'
                             : 'bg-slate-50 border-slate-200'
@@ -196,7 +178,6 @@ const HITLModal = ({ isOpen, type = 'hitl', output, sessionId, onApprove, onReje
                         <FormattedOutput text={output} />
                     </div>
 
-                    {/* Reject → feedback area */}
                     {view === 'reject' && (
                         <div className="mt-5 animate-in fade-in slide-in-from-bottom-2 duration-200">
                             <label className="block text-sm font-semibold text-slate-800 mb-2">
@@ -214,10 +195,8 @@ const HITLModal = ({ isOpen, type = 'hitl', output, sessionId, onApprove, onReje
                     )}
                 </div>
 
-                {/* ── Footer / Actions ───────────────────────────────────────── */}
                 <div className="flex-shrink-0 border-t border-gray-100 bg-gray-50/80 backdrop-blur px-7 py-4">
 
-                    {/* COMPLETED mode */}
                     {isCompleted && (
                         <div className="flex items-center gap-3">
                             <button
@@ -237,7 +216,6 @@ const HITLModal = ({ isOpen, type = 'hitl', output, sessionId, onApprove, onReje
                         </div>
                     )}
 
-                    {/* HITL mode — review view */}
                     {!isCompleted && view === 'review' && (
                         <div className="flex items-center gap-3">
                             <button
@@ -260,7 +238,6 @@ const HITLModal = ({ isOpen, type = 'hitl', output, sessionId, onApprove, onReje
                         </div>
                     )}
 
-                    {/* HITL mode — reject / feedback view */}
                     {!isCompleted && view === 'reject' && (
                         <div className="flex items-center gap-3">
                             <button

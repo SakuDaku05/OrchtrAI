@@ -8,7 +8,6 @@ import {
   Loader2, Inbox,
 } from 'lucide-react';
 
-// Map backend log types / content keywords to display levels
 const inferLevel = (log) => {
   const content = typeof log.content === 'string' ? log.content.toLowerCase() : '';
   if (content.includes('error') || content.includes('fail') || content.includes('fatal')) return 'ERROR';
@@ -33,7 +32,6 @@ const AGENT_COLORS = {
 };
 const getAgentColor = (agent) => AGENT_COLORS[agent] || 'text-gray-400';
 
-// Turn any content value into a readable string
 const formatContent = (content) => {
   if (typeof content === 'string') return content;
   if (Array.isArray(content)) return content.map((c) => (typeof c === 'string' ? c : c?.text || JSON.stringify(c))).join(' ');
@@ -82,7 +80,6 @@ const Logs = () => {
         <main className="flex-1 overflow-y-auto p-6 md:p-8">
           <div className="max-w-7xl mx-auto space-y-6 h-full flex flex-col">
 
-            {/* Page Header */}
             <div className="flex items-end justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-2 text-slate-500 font-medium">
@@ -113,7 +110,6 @@ const Logs = () => {
               </div>
             </div>
 
-            {/* Toolbar */}
             <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between gap-4">
               <div className="flex items-center gap-2 flex-wrap">
                 {AGENT_TABS.map((tab) => (
@@ -140,9 +136,7 @@ const Logs = () => {
               </div>
             </div>
 
-            {/* Log Viewer */}
             <div className="flex-1 bg-[#0f111a] rounded-2xl border border-slate-800 shadow-inner overflow-hidden flex flex-col font-mono text-sm">
-              {/* Terminal chrome bar */}
               <div className="flex items-center gap-4 px-6 py-3 border-b border-slate-800/50 bg-[#151822]">
                 <div className="flex gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50" />

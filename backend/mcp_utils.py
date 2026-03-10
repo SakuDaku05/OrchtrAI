@@ -9,7 +9,6 @@ def create_autogen_tool(connector: BaseConnector, tool_def: Dict[str, Any]) -> F
     tool_name = tool_def["name"]
     
     async def tool_fn(**kwargs) -> Any:
-        # Pass all arguments directly to connector call
         return await connector.execute_tool(tool_name, kwargs)
     
     return FunctionTool(

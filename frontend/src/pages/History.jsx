@@ -8,7 +8,6 @@ import {
   Sparkles, ChevronLeft, Trash2
 } from 'lucide-react';
 
-// ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_META = {
   COMPLETED: { label: 'Completed', icon: CheckCircle2, cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
@@ -28,7 +27,6 @@ const AGENT_MESSAGE_COLORS = {
   System: { dot: 'bg-gray-400', label: 'text-gray-500', card: 'border-gray-100 bg-gray-50/40' },
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const calcDuration = (created, updated) => {
   try {
@@ -57,7 +55,6 @@ const formatContent = (content) => {
   return String(content ?? '');
 };
 
-// ── Detail Slide-Over ─────────────────────────────────────────────────────────
 
 const DetailPanel = ({ sessionId, task, onClose }) => {
   const [detail, setDetail] = useState(null);
@@ -79,19 +76,16 @@ const DetailPanel = ({ sessionId, task, onClose }) => {
 
   return (
     <>
-      {/* ── Backdrop ── */}
       <div
         className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
         style={{ animation: 'fadeIn 0.2s ease both' }}
       />
 
-      {/* ── Slide-over panel ── */}
       <div
         className="fixed top-0 right-0 bottom-0 z-50 w-full max-w-2xl flex flex-col bg-white shadow-2xl"
         style={{ animation: 'slideInRight 0.3s cubic-bezier(0.16,1,0.3,1) both' }}
       >
-        {/* Header */}
         <div className="flex items-start gap-4 px-7 py-5 border-b border-gray-100 bg-gradient-to-r from-slate-900 to-slate-800">
           <button
             onClick={onClose}
@@ -114,14 +108,12 @@ const DetailPanel = ({ sessionId, task, onClose }) => {
           </button>
         </div>
 
-        {/* Meta row */}
         <div className="flex items-center gap-6 px-7 py-3 bg-slate-50 border-b border-gray-100 text-xs text-gray-500 font-medium">
           <span className="flex items-center gap-1.5"><Calendar size={13} /> {formatDate(task?.created_at)}</span>
           <span className="flex items-center gap-1.5"><Clock size={13} /> Duration: {calcDuration(task?.created_at, task?.updated_at)}</span>
           <span className="flex items-center gap-1.5"><Bot size={13} /> {chatHistory.length} messages</span>
         </div>
 
-        {/* ── Body ── */}
         <div className="flex-1 overflow-y-auto px-7 py-6">
           {loading ? (
             <div className="flex items-center justify-center gap-3 py-24 text-gray-400">
@@ -141,7 +133,6 @@ const DetailPanel = ({ sessionId, task, onClose }) => {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Section heading */}
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles size={14} className="text-indigo-400" />
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Agent Conversation</span>
@@ -155,7 +146,6 @@ const DetailPanel = ({ sessionId, task, onClose }) => {
 
                 return (
                   <div key={i} className={`rounded-2xl border p-4 transition-all ${colors.card} ${isToolCall ? 'opacity-60' : ''}`}>
-                    {/* Agent badge */}
                     <div className="flex items-center gap-2 mb-2.5">
                       <div className={`w-2 h-2 rounded-full ${colors.dot} flex-shrink-0`} />
                       <span className={`text-xs font-bold uppercase tracking-wide ${colors.label}`}>{msg.agent}</span>
@@ -163,7 +153,6 @@ const DetailPanel = ({ sessionId, task, onClose }) => {
                         <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">tool call</span>
                       )}
                     </div>
-                    {/* Content */}
                     <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
                       {text || <span className="italic text-slate-400">No text content</span>}
                     </p>
@@ -171,7 +160,6 @@ const DetailPanel = ({ sessionId, task, onClose }) => {
                 );
               })}
 
-              {/* Reviewer final output highlight */}
               {(() => {
                 const reviewerMsgs = chatHistory.filter((m) => m.agent === 'Reviewer');
                 const lastReviewer = reviewerMsgs[reviewerMsgs.length - 1];
@@ -205,7 +193,6 @@ const DetailPanel = ({ sessionId, task, onClose }) => {
   );
 };
 
-// ── History Page ──────────────────────────────────────────────────────────────
 
 const History = () => {
   const [tasks, setTasks] = useState([]);
@@ -258,7 +245,6 @@ const History = () => {
         <main className="flex-1 overflow-y-auto p-8">
           <div className="max-w-6xl mx-auto">
 
-            {/* Header */}
             <div className="flex items-end justify-between mb-8">
               <div>
                 <h1 className="text-3xl font-bold text-slate-900 mb-2">Task History</h1>
@@ -276,7 +262,6 @@ const History = () => {
               </div>
             </div>
 
-            {/* Table */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               {loading ? (
                 <div className="flex items-center justify-center gap-3 py-24 text-gray-400">
@@ -378,7 +363,6 @@ const History = () => {
         </main>
       </div>
 
-      {/* Slide-over detail panel */}
       {selectedTask && (
         <DetailPanel
           sessionId={selectedTask.sessionId}
@@ -386,7 +370,6 @@ const History = () => {
           onClose={closeDetail}
         />
       )}
-      {/* Delete Confirmation Modal */}
       {deleteConfirmId && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" style={{ animation: 'fadeIn 0.2s ease both' }}>
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 transform transition-all" style={{ animation: 'slideInRight 0.3s cubic-bezier(0.16,1,0.3,1) both' }}>

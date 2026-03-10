@@ -31,7 +31,6 @@ const Calendar = () => {
             setLoading(true);
             setError(null);
             const data = await getCalendarEvents();
-            // Ensure we have an array of events
             setEvents(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error("Failed to fetch events:", err);
@@ -49,7 +48,6 @@ const Calendar = () => {
     const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
     const onDateClick = day => setSelectedDate(day);
 
-    // Helper to get events for a specific day
     const getEventsForDay = (date) => {
         return events.filter(event => {
             if (!event.start_time) return false;
@@ -141,7 +139,6 @@ const Calendar = () => {
                         key={day}
                         onClick={() => onDateClick(cloneDay)}
                     >
-                        {/* Selected Background Ring */}
                         {isSelected && (
                             <motion.div
                                 layoutId="selectedDay"
@@ -161,7 +158,6 @@ const Calendar = () => {
                             {formattedDate}
                         </span>
 
-                        {/* Event Dots */}
                         {hasEvents && (
                             <div className="flex gap-1 mt-1 z-10">
                                 {dayEvents.slice(0, 3).map((e, idx) => (
@@ -269,7 +265,6 @@ const Calendar = () => {
                 <main className="flex-1 overflow-y-auto p-6 md:p-8">
                     <div className="max-w-6xl mx-auto space-y-8 py-4">
                         
-                        {/* Page Header block matching the Integrations page theme */}
                         <div className="flex items-center justify-between bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
                             <div className="flex items-start gap-5">
                                 <div className="bg-black text-white p-3 rounded-xl shadow-sm mt-1">
@@ -293,14 +288,12 @@ const Calendar = () => {
                             </div>
                         ) : (
                             <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex min-h-[600px]">
-                                {/* Calendar Grid Section */}
                                 <div className="w-8/12 p-8 border-r border-gray-100 flex flex-col">
                                     {renderHeader()}
                                     {renderDays()}
                                     {renderCells()}
                                 </div>
 
-                                {/* Agenda Panel Section */}
                                 <div className="w-4/12 p-8 bg-gray-50/30">
                                     {renderAgenda()}
                                 </div>

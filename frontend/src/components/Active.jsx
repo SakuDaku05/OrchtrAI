@@ -72,7 +72,6 @@ const Active = ({ activeStep = -1 }) => {
       </div>
 
       <div className="flex items-center justify-between w-full gap-4 flex-1 relative mt-4">
-        {/* Connection Lines Background */}
         <div className="absolute top-1/2 left-0 w-full h-[2px] bg-slate-100 -translate-y-1/2 -z-10" />
 
         {agents.map((agent, index) => (

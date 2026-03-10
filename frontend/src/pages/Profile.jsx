@@ -24,7 +24,6 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Load profile from backend on mount
   useEffect(() => {
     getProfile()
       .then((data) => {
@@ -98,7 +97,6 @@ const Profile = () => {
 
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 
-              {/* Header Section */}
               <div className="p-8 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
                 <div className="flex items-center gap-6">
                   <div className="relative">
@@ -125,11 +123,9 @@ const Profile = () => {
                 </button>
               </div>
 
-              {/* Form */}
               <div className="p-8 space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                  {/* Full Name */}
                   <div className="space-y-2">
                     <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
                       <User size={16} className="text-gray-400" /> Full Name
@@ -141,7 +137,6 @@ const Profile = () => {
                     />
                   </div>
 
-                  {/* Email (read-only) */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
@@ -155,7 +150,6 @@ const Profile = () => {
                     />
                   </div>
 
-                  {/* College Email (read-only) */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
@@ -169,7 +163,6 @@ const Profile = () => {
                     />
                   </div>
 
-                  {/* GitHub Username */}
                   <div className="space-y-2">
                     <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
                       <Github size={16} className="text-gray-400" /> GitHub Username
@@ -182,7 +175,6 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* GitHub URL */}
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
                     <LinkIcon size={16} className="text-gray-400" /> GitHub Profile URL
@@ -194,7 +186,6 @@ const Profile = () => {
                   />
                 </div>
 
-                {/* Bio */}
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
                     <FileText size={16} className="text-gray-400" /> Bio
@@ -205,7 +196,6 @@ const Profile = () => {
                   />
                 </div>
 
-                {/* Skills */}
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
                     <Wrench size={16} className="text-gray-400" /> Skills

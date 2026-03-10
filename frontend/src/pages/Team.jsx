@@ -14,7 +14,6 @@ import {
   Sparkles
 } from 'lucide-react';
 
-// Removed TypeScript typings for pure JSX compatibility
 const AgentProfile = ({ name, role, icon: Icon, color, description, tasks }) => (
   <motion.div
     whileHover={{ y: -5 }}
@@ -92,7 +91,6 @@ const Team = () => {
         <main className="flex-1 overflow-y-auto p-6 md:p-8">
           <div className="max-w-6xl mx-auto space-y-16 py-8">
 
-            {/* Header Section */}
             {/* <section className="text-center space-y-4">
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -111,14 +109,12 @@ const Team = () => {
               </p>
             </section> */}
 
-            {/* Agent Grid */}
             <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
               {agents.map((agent, i) => (
                 <AgentProfile key={i} {...agent} />
               ))}
             </section>
 
-            {/* Collaboration Loop Section */}
             <section className="bg-white rounded-[40px] border border-slate-200 p-12 shadow-sm overflow-hidden relative">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                 <div className="space-y-8">
@@ -150,7 +146,6 @@ const Team = () => {
                 </div>
 
                 <div className="relative h-[400px] bg-slate-50 rounded-3xl border border-slate-100 flex items-center justify-center overflow-hidden hidden lg:flex">
-                  {/* Visual representation of the loop */}
                   <div className="absolute inset-0 opacity-10">
                     <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-transparent to-transparent" />
                   </div>
@@ -180,7 +175,6 @@ const Team = () => {
               </div>
             </section>
 
-            {/* Human in the Loop Section */}
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 bg-black rounded-[40px] p-12 text-white relative overflow-hidden">
                 <div className="relative z-10 space-y-6">
@@ -205,7 +199,6 @@ const Team = () => {
                   </div>
                 </div>
 
-                {/* Decorative background element */}
                 <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-emerald-500/10 blur-[100px] rounded-full" />
               </div>
 

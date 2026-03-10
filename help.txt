@@ -1,0 +1,1 @@
+(self, **kwargs: typing_extensions.Unpack[autogen_ext.models.openai.config.OpenAIClientConfiguration])

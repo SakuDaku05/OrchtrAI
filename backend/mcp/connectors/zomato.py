@@ -46,8 +46,6 @@ class ZomatoConnector(BaseConnector):
 
     async def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         if tool_name == "search_restaurants":
-            # Mocking the actual REST call for demonstration
-            # In a real impl: async with aiohttp.ClientSession() as session: ...
             return {
                 "results": [
                     {"name": "The Great Indian Feast", "rating": 4.5, "address": "123 Food Street"},
@@ -61,5 +59,4 @@ class ZomatoConnector(BaseConnector):
         raise ValueError(f"Unknown tool: {tool_name}")
 
     async def get_resource(self, uri: str) -> Any:
-        # Resource implementation for read-only data access
         return {"uri": uri, "data": "Sample raw restaurant data snapshot"}

@@ -1,4 +1,3 @@
-# backend/main.py
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks, File, UploadFile, Form
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,7 +46,6 @@ async def startup_event():
                 "is_active": True
             })
 
-    # EXTRA: Auto-seed Serper if credentials provided in .env
     if settings.SERPER_API_KEY:
         configs = await db_service.get_mcp_configs()
         if not any(c.get("service") == "serper" for c in configs):
@@ -62,7 +60,6 @@ async def startup_event():
             })
 
 
-# ── Internal: run the AutoGen team and stream results into Cosmos DB (Your Code) ──
 
 async def run_workflow(session_id: str, prompt: str, resume_feedback: str = None):
     """
@@ -76,9 +73,6 @@ async def run_workflow(session_id: str, prompt: str, resume_feedback: str = None
     team = build_orchestrai_team(is_approved=db_state.get("is_approved", False))
 
     if db_state.get("autogen_state"):
-        # AutoGen's `TextMentionTermination` searches the entire message history. 
-        # We must scrub the old 'STATUS: PENDING_APPROVAL' flags from the state 
-        # so it doesn't instantly terminate again upon resuming for the feedback loop.
         def scrub_state(obj):
             if isinstance(obj, str):
                 return obj.replace("STATUS: PENDING_APPROVAL", "STATUS: PENDING_APPROVAL (ACKNOWLEDGED)")
@@ -136,7 +130,6 @@ async def run_workflow(session_id: str, prompt: str, resume_feedback: str = None
     await db_service.save_state(db_state)
 
 
-# ── Core Workflow Endpoints ───────────────────────────────────────────────────
 
 @app.post("/api/workflow/start")
 async def start_workflow(request: TaskRequest, background_tasks: BackgroundTasks):
@@ -268,7 +261,6 @@ async def upload_document(session_id: str = Form(...), file: UploadFile = File(.
     try:
         content = await file.read()
         
-        # Offload heavy CPU work to threadpool to avoid blocking FastAPI
         def process_doc(c, filename):
             t = extract_text_from_file(c, filename)
             chr = chunk_text(t, chunk_size=800, overlap=100)
@@ -309,7 +301,6 @@ async def delete_mcp_config(mcp_id: str):
     return {"status": "success"}
 
 
-# ── EXACT: New Global Calendar Endpoint ───────────────────────────────────────
 
 @app.get("/api/calendar")
 async def get_calendar_events():
@@ -317,7 +308,6 @@ async def get_calendar_events():
     return {"events": events}
 
 
-# ── Existing History, Profile, and Logs Endpoints (Your Code) ─────────────────
 
 @app.get("/api/history")
 async def get_history():

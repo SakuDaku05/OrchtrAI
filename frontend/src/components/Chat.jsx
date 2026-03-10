@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Loader2, Sparkles, CheckCircle2, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
 
-// ── Formatted Output Renderer (reused from HITLModal) ─────────────────────────
 function FormattedOutput({ text }) {
   if (!text) return null;
 
@@ -25,7 +24,6 @@ function FormattedOutput({ text }) {
     const trimmed = raw.trim();
     if (trimmed === '') { i++; continue; }
 
-    // Section heading: "**...**" alone OR "## ..."
     if (/^\*\*(.+)\*\*$/.test(trimmed) || /^#{1,3}\s/.test(trimmed)) {
       const label = trimmed.replace(/^\*\*|\*\*$/g, '').replace(/^#+\s/, '');
       elements.push(
@@ -37,7 +35,6 @@ function FormattedOutput({ text }) {
       i++; continue;
     }
 
-    // Numbered item: "1. ..."
     if (/^\d+\.\s/.test(trimmed)) {
       const num = trimmed.match(/^(\d+)/)[1];
       const content = trimmed.replace(/^\d+\.\s/, '');
@@ -52,7 +49,6 @@ function FormattedOutput({ text }) {
       i++; continue;
     }
 
-    // Bullet: "- " / "• " / "* "
     if (/^[-•*]\s/.test(trimmed)) {
       const content = trimmed.replace(/^[-•*]\s/, '');
       elements.push(
@@ -64,7 +60,6 @@ function FormattedOutput({ text }) {
       i++; continue;
     }
 
-    // Default paragraph
     elements.push(
       <p key={i} className="text-slate-700 text-sm leading-relaxed py-0.5">
         {inlineBold(trimmed, i)}
@@ -76,13 +71,11 @@ function FormattedOutput({ text }) {
   return <div className="space-y-0.5">{elements}</div>;
 }
 
-// ── Chat Component ────────────────────────────────────────────────────────────
 
 const Chat = ({ messages, onSend, status }) => {
   const [input, setInput] = useState('');
   const endRef = useRef(null);
 
-  // Auto-scroll to bottom when messages update
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, status]);
@@ -100,7 +93,6 @@ const Chat = ({ messages, onSend, status }) => {
   return (
     <div className="flex flex-col h-full min-h-[500px] border border-gray-200 bg-white rounded-3xl overflow-hidden shadow-sm">
 
-      {/* ── Header ── */}
       <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <Sparkles size={18} className="text-indigo-500" />
@@ -119,7 +111,6 @@ const Chat = ({ messages, onSend, status }) => {
         )}
       </div>
 
-      {/* ── Message History Area ── */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 bg-[#f8fafc]">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center max-w-sm mx-auto opacity-60">
@@ -143,15 +134,12 @@ const Chat = ({ messages, onSend, status }) => {
                     : 'bg-white border border-gray-200 text-slate-800 rounded-bl-sm shadow-sm'
                   }`}
               >
-                {/* Format system/agent messages nicely */}
                 {msg.role === 'system' ? (
                   <div className="space-y-4">
-                    {/* Reusing FormattedOutput to style the Reviewer's message */}
                     <div className="prose-sm">
                       <FormattedOutput text={msg.content} />
                     </div>
 
-                    {/* Appended HITL instruction block */}
                     {msg.isHitlPrompt && (
                       <div className="mt-4 pt-4 border-t border-gray-100">
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex gap-3 text-amber-800 text-[13px]">
@@ -177,7 +165,6 @@ const Chat = ({ messages, onSend, status }) => {
         <div ref={endRef} />
       </div>
 
-      {/* ── Input Area ── */}
       <div className="p-4 bg-white border-t border-gray-100 flex-shrink-0">
         <form onSubmit={handleSubmit} className="relative flex items-center gap-3">
           <input

@@ -1,4 +1,3 @@
-# The background script that runs the AutoGen team
 import asyncio
 import json
 from azure.servicebus.aio import ServiceBusClient
@@ -12,18 +11,15 @@ async def process_message(msg_payload: dict):
     session_id = msg_payload["session_id"]
     action = msg_payload["action"]
     
-    # Load State from Cosmos
     db_state = await db_service.get_state(session_id)
     if not db_state:
         return
 
-    # Load MCP Tools if enabled
     extra_tools = []
     enabled_mcps = db_state.get("enabled_mcps", [])
     if enabled_mcps:
         all_configs = await db_service.get_mcp_configs()
         for mcp_id in enabled_mcps:
-            # Find the config for this MCP
             config_item = next((c for c in all_configs if c["id"] == mcp_id), None)
             if config_item:
                 try:
@@ -33,7 +29,6 @@ async def process_message(msg_payload: dict):
                 except Exception as e:
                     print(f"Failed to load MCP {mcp_id}: {str(e)}")
 
-    # Build the AutoGen Team
     is_approved = db_state.get("is_approved", False)
     hitl_enabled = db_state.get("hitl_enabled", True)
     
@@ -43,20 +38,15 @@ async def process_message(msg_payload: dict):
         hitl_enabled=hitl_enabled
     )
 
-    #Restore memory if resuming
     if db_state.get("autogen_state"):
         await team.load_state(db_state["autogen_state"])
 
-    #Determine Task (Updated to handle the CHAT action)
     task_input = msg_payload.get("prompt") if action in ["START", "CHAT"] else msg_payload.get("feedback")
 
-    # Run the Team
     try:
-        # Run the workflow. It will yield messages until termination condition hits.
         async for event in team.run_stream(task=task_input):
             if hasattr(event, 'source') and hasattr(event, 'content'):
                 
-                # Kept YOUR safe_serialize function (much safer than a raw string cast)
                 def safe_serialize(obj):
                     if isinstance(obj, str): return obj
                     if isinstance(obj, dict): return {k: safe_serialize(v) for k, v in obj.items()}
@@ -67,7 +57,6 @@ async def process_message(msg_payload: dict):
 
                 serialized_content = safe_serialize(event.content)
 
-                # Append to Cosmos chat history for React UI to poll
                 db_state["chat_history"].append({
                     "agent": event.source,
                     "role": "assistant",
@@ -84,7 +73,6 @@ async def process_message(msg_payload: dict):
                 
                 await db_service.save_state(db_state)
         
-        # Check why it terminated (HITL vs Completed)
 
         final_msgs = [m["content"] for m in db_state["chat_history"] if m["agent"] == "Reviewer"]
         if final_msgs and "STATUS: PENDING_APPROVAL" in str(final_msgs[-1]):
@@ -98,7 +86,6 @@ async def process_message(msg_payload: dict):
         if "chat_history" not in db_state: db_state["chat_history"] = []
         db_state["chat_history"].append({"agent": "System", "content": f"Fatal Error: {str(e)}"})
 
-    #Save Final Checkpoint
     db_state["autogen_state"] = await team.save_state()
     await db_service.save_state(db_state)
 
@@ -118,7 +105,6 @@ async def main():
                     await receiver.complete_message(msg)
                 except Exception as e:
                     print(f"Failed to process message: {str(e)}")
-                    # Move to dead-letter queue if it critically fails
                     await receiver.dead_letter_message(msg, reason="ProcessingError", error_description=str(e))
 
 if __name__ == "__main__":

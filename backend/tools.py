@@ -1,11 +1,9 @@
-# Definitions for DuckDuckGo and Outlook tools
 from autogen_core.tools import FunctionTool
 from duckduckgo_search import DDGS
 from pydantic import BaseModel, Field
 import json
 import datetime
 
-# --- 0. Helper Tools ---
 async def get_current_datetime() -> str:
     """Returns the current date and time. Use this to resolve relative time requests like 'tomorrow' or 'next week'."""
     now = datetime.datetime.now()
@@ -14,7 +12,6 @@ async def get_current_datetime() -> str:
 current_time_tool = FunctionTool(get_current_datetime, description="Returns the current date and time for temporal context.")
 
 
-# --- 1. Free Web Search Tool (For Researcher) ---
 class SearchParams(BaseModel):
     query: str = Field(..., description="The search query to look up on the internet.")
     max_results: int = Field(default=5, description="Number of results to return.")
@@ -33,7 +30,6 @@ async def web_search(params: SearchParams) -> str:
 duckduckgo_tool = FunctionTool(web_search, description="Searches the live internet for up-to-date facts and context.")
 
 
-# --- 2. Enterprise Action Tool (For Executor) ---
 class CalendarParams(BaseModel):
     attendees: list[str] = Field(..., description="List of email addresses.")
     subject: str = Field(..., description="Meeting subject.")
@@ -54,7 +50,6 @@ async def book_outlook_meeting(params: CalendarParams) -> str:
 calendar_tool = FunctionTool(book_outlook_meeting, description="Drafts and stages a Microsoft Outlook calendar invite.")
 
 
-# --- 3. Global Storage Tools (Shared Intelligence) ---
 class GlobalEventParams(BaseModel):
     title: str = Field(..., description="Short title of the event or reminder.")
     start_time: str = Field(..., description="ISO 8601 formatted start time (e.g., 2024-03-25T10:00:00).")
@@ -86,7 +81,6 @@ async def add_global_event(params: GlobalEventParams) -> str:
     except Exception as e:
         return f"ERROR: Failed to save to global calendar: {str(e)}"
 
-# Added from friend's code
 async def delete_global_event(event_id: str, event_type: str = "MEETING") -> str:
     """
     Removes an event or reminder from the OrchestrAI Global Calendar.
@@ -103,7 +97,6 @@ global_calendar_tool = FunctionTool(add_global_event, description="Adds an event
 delete_calendar_tool = FunctionTool(delete_global_event, description="Deletes an event or reminder from the shared Global Calendar using its ID.")
 
 
-# --- 4. PageIndex Document Retrieval Tools (Added from friend's code) ---
 def search_pageindex(query: str, tree: dict) -> list:
     """Traverse PageIndex tree and find relevant sections."""
     matches = []
@@ -153,7 +146,6 @@ async def query_document_index(query: str, session_id: str) -> str:
 pageindex_tool = FunctionTool(query_document_index, description="Queries the document's PageIndex for relevant information using a natural language query.")
 
 
-# --- 5. Email Communication Tools (For Executor - Added from friend's code) ---
 class EmailParams(BaseModel):
     recipient: str = Field(..., description="Recipient email address.")
     subject: str = Field(..., description="Subject of the email.")
@@ -171,17 +163,14 @@ async def send_brevo_email(params: EmailParams) -> str:
     if not settings.BREVO_API_KEY:
         return "ERROR: Brevo API Key not configured in .env."
 
-    # Configure API key authorization: api-key
     configuration = sib_api_v3_sdk.Configuration()
     configuration.api_key['api-key'] = settings.BREVO_API_KEY
 
-    # create an instance of the API class
     api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
     
     sender = {"name": settings.BREVO_SENDER_NAME, "email": settings.BREVO_SENDER_EMAIL}
     to = [{"email": params.recipient}]
     
-    # Format body with simple HTML wrapper
     html_content = f"<html><body><div style='font-family: sans-serif; line-height: 1.5;'>{params.body.replace(chr(10), '<br>')}</div></body></html>"
     
     send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(

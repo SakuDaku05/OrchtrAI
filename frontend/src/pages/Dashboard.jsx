@@ -1,4 +1,3 @@
-// src/pages/Dashboard.jsx
 import React, { useState, useRef } from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
@@ -12,17 +11,13 @@ const Dashboard = () => {
   const [workflowStatus, setWorkflowStatus] = useState('IDLE'); // 'IDLE' | 'ACTIVE' | 'PAUSED_FOR_HITL' | 'COMPLETED'
   const [currentSessionId, setCurrentSessionId] = useState(null);
 
-  // Terminal logs (from SSE)
   const [liveLogs, setLiveLogs] = useState([]);
   const allLogsRef = useRef([]);
 
-  // Chat conversation UI state
-  // [{ role: 'user' | 'system', content: string, isHitlPrompt?: boolean }]
   const [chatMessages, setChatMessages] = useState([]);
 
   const agentMap = { Planner: 0, Researcher: 1, Executor: 2, Reviewer: 3, Finalizer: 4 };
 
-  // ── Output Extraction ────────────────────────────────────────────────────────
 
   const extractText = (raw) => {
     if (!raw && raw !== 0) return '';
@@ -37,21 +32,18 @@ const Dashboard = () => {
   const extractBestOutput = (extraLogs = []) => {
     const allLogs = [...allLogsRef.current, ...extraLogs];
 
-    // First, prioritize the Finalizer output
     const finalizerMsgs = allLogs.filter((l) => typeof l.agent === 'string' && l.agent.toLowerCase() === 'finalizer');
     if (finalizerMsgs.length > 0) {
       let text = extractText(finalizerMsgs[finalizerMsgs.length - 1].content);
       return text.replace(/COMPLETE_WORKFLOW/g, '').trim();
     }
 
-    // Fallback: search for Executor output for older workflows
     const executorMsgs = allLogs.filter((l) => typeof l.agent === 'string' && l.agent.toLowerCase() === 'executor');
     if (executorMsgs.length > 0) {
       let text = extractText(executorMsgs[executorMsgs.length - 1].content);
       return text.replace(/STATUS:\s*PENDING_APPROVAL/gi, '').replace(/COMPLETE_WORKFLOW/g, '').trim();
     }
 
-    // Fallback: search across all logs bottom-up and avoid tool call payloads if possible
     for (let i = allLogs.length - 1; i >= 0; i--) {
       let text = extractText(allLogs[i].content);
       if (text.trim()) {
@@ -61,15 +53,11 @@ const Dashboard = () => {
     return '';
   };
 
-  // ── SSE stream ────────────────────────────────────────────────────────────────
 
   const openStream = (sessionId) => {
-    // Pass the start point to avoid duplicate history logs upon reconnecting
     const startIdx = allLogsRef.current.length;
     const url = `/api/workflow/${sessionId}/stream?start=${startIdx}`;
 
-    // We recreate streamWorkflow logic manually here to append the start param since it's hardcoded in api.js
-    // Assuming backend runs on same host/port if using Vite proxy, or from env.
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
     const eventSource = new EventSource(`${baseUrl}${url}`);
 
@@ -128,12 +116,10 @@ const Dashboard = () => {
     };
   };
 
-  // ── Action Handlers ───────────────────────────────────────────────────────────
 
   const handleChatSend = async (inputText) => {
     if (!inputText.trim()) return;
 
-    // If we are waiting for HITL approval, this input is the Accept/Reject decision
     if (workflowStatus === 'PAUSED_FOR_HITL') {
       const text = inputText.trim();
       setChatMessages(prev => [...prev, { role: 'user', content: text }]);
@@ -143,7 +129,6 @@ const Dashboard = () => {
 
       try {
         await approveWorkflow(currentSessionId, isApproval, text);
-        // Restart stream for both approval and rejection to get the team's final output or feedback loop
         setActiveStep(0);
         openStream(currentSessionId);
       } catch (err) {
@@ -153,7 +138,6 @@ const Dashboard = () => {
       return;
     }
 
-    // Otherwise, this is a brand new Orchestration request
     allLogsRef.current = [];
     setLiveLogs([]);
     setChatMessages([{ role: 'user', content: inputText.trim() }]);
@@ -161,7 +145,6 @@ const Dashboard = () => {
     setWorkflowStatus('ACTIVE');
 
     try {
-      // Fetch active MCPs so they can be injected into the backend pipeline
       const mcpConfigs = await getMcpConfigs();
       const activeMcpIds = mcpConfigs.filter(c => c.is_active).map(c => c.id);
 
@@ -185,7 +168,6 @@ const Dashboard = () => {
         <main className="flex-1 overflow-y-auto p-6 md:p-8">
           <div className="w-full max-w-[1200px] mx-auto flex flex-col gap-10">
 
-            {/* Top section: Orchestration Chat */}
             <div className="flex flex-col min-h-[500px] max-h-[800px]">
               <Chat
                 messages={chatMessages}
@@ -194,12 +176,10 @@ const Dashboard = () => {
               />
             </div>
 
-            {/* Middle section: Active Orchestration (Graph) */}
             <div className="w-full">
               <Active activeStep={activeStep} />
             </div>
 
-            {/* Bottom section: Log Terminal and Task Breakdown */}
             <div className="w-full mb-8">
               <CommandLine activeStep={activeStep} logs={liveLogs} />
             </div>

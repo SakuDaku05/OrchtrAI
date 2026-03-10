@@ -27,7 +27,6 @@ def extract_text_from_file(file_content: bytes, filename: str) -> str:
             print(f"Error extracting PDF: {e}")
             raise ValueError(f"Failed to read PDF: {str(e)}")
     else:
-        # Default fallback to plain text UTF-8
         text = file_content.decode('utf-8', errors='ignore')
         
     return text
@@ -46,15 +45,12 @@ def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 100) -> list:
         chunks.append(text[start:end].strip())
         start += chunk_size - overlap
         
-    # Remove empty chunks
     return [c for c in chunks if c]
 
 def embed_texts(texts: list) -> list:
     """Generates a dense vector embedding for a list of string chunks."""
     if not texts:
         return []
-    # Generate embeddings as numpy arrays
     m = get_model()
     embeddings = m.encode(texts)
-    # Convert exactly to list of floats for JSON serialization into Cosmos
     return [embedding.tolist() for embedding in embeddings]

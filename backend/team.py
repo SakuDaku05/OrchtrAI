@@ -1,18 +1,14 @@
-# Assembles the Planner, Researcher, Executor, etc.
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.teams import SelectorGroupChat
 from autogen_agentchat.conditions import TextMentionTermination, MaxMessageTermination
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from backend.config import settings
-# Added new calendar, time, and email tools from friend's code
 from backend.tools import duckduckgo_tool, calendar_tool, global_calendar_tool, current_time_tool, email_tool
 import datetime
 
 def build_orchestrai_team(is_approved: bool = False, extra_tools: list = None, hitl_enabled: bool = True):
-    # model_info is required for non-OpenAI model names
     from autogen_core.models import ModelInfo
 
-    # Added time-awareness from friend's code
     current_date = datetime.datetime.now().strftime("%A, %B %d, %Y")
 
     if extra_tools is None:
@@ -32,20 +28,17 @@ def build_orchestrai_team(is_approved: bool = False, extra_tools: list = None, h
             ),
         )
 
-    # Retaining your distinct model choices for different cognitive loads
     planner_client    = make_client(settings.GROQ_API_KEY_2, settings.GROQ_MODEL_2)
     reviewer_client   = make_client(settings.GROQ_API_KEY_2, settings.GROQ_MODEL_2)
     researcher_client = make_client(settings.GROQ_API_KEY_1, settings.GROQ_MODEL_1)
     executor_client   = make_client(settings.GROQ_API_KEY_1, settings.GROQ_MODEL_1)
     finalizer_client  = make_client(settings.GROQ_API_KEY_2, getattr(settings, "FINALIZER_MODEL", settings.GROQ_MODEL_2))
 
-    # -- Define Agents --
     planner = AssistantAgent(
         name="Planner",
         model_client=planner_client,
         tools=[current_time_tool], # Friend's addition
         description="Plans the workflow. Route to this agent first, or when the user provides new Feedback.",
-        # Injected current date into system message
         system_message=f"You are the Architect. Today is {current_date}. Decompose the user's objective into a step-by-step plan. Assign steps to Researcher or Executor. Do NOT execute tools yourself."
     )
 
@@ -62,7 +55,6 @@ def build_orchestrai_team(is_approved: bool = False, extra_tools: list = None, h
     executor = AssistantAgent(
         name="Executor",
         model_client=executor_client,
-        # Merged new global calendar, time, and email tools
         tools=[calendar_tool, global_calendar_tool, current_time_tool, email_tool] + extra_tools,
         description="Executes APIs. Route here when the Planner asks for an action to be performed.",
         system_message=f"""You are the Executor. Today is {current_date}.
@@ -97,7 +89,6 @@ def build_orchestrai_team(is_approved: bool = False, extra_tools: list = None, h
         5. End your message with exactly: COMPLETE_WORKFLOW""" 
     )
 
-    # -- Terminations --
     fallback_termination = MaxMessageTermination(max_messages=30)
     done_termination = TextMentionTermination("COMPLETE_WORKFLOW")
 
@@ -107,7 +98,6 @@ def build_orchestrai_team(is_approved: bool = False, extra_tools: list = None, h
     else:
         termination_condition = done_termination | fallback_termination
 
-    # -- Create Team --
     team = SelectorGroupChat(
         participants=[planner, researcher, executor, reviewer, finalizer],
         model_client=planner_client,

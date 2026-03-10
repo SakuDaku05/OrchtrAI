@@ -1,4 +1,3 @@
-# Pydantic models for data validation
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 
@@ -29,7 +28,6 @@ class ChatRequest(BaseModel):
     session_id: str
     message: str
 
-# Your custom profile model (kept intact)
 class UserProfile(BaseModel):
     user_id: str = "default_user" # Hardcoded for MVP, link to Entra ID later
     full_name: str
