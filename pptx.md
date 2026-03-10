@@ -20,7 +20,7 @@
 **What have you built?**
 
 *   **A Digital Workforce, Not a Chatbot:** OrchestrAI is an autonomous, multi-agent orchestration framework wrapped in a "Mission Control" web interface. It behaves like a highly capable virtual team rather than a text generator.
-*   **Core Value Proposition - "Delegation at Scale":** It allows users to issue high-level, natural language directives. The system autonomously decomposes the request, researches context, coordinates between specialized sub-agents, and prepares the execution of external actions (like scheduling APIs or CRM updates).
+*   **Core Value Proposition - "Delegation at Scale":** It allows users to issue high-level, natural language directives. The system autonomously decomposes the request, researches context, coordinates between specialized sub-agents, and prepares the execution of external actions (e.g., sending automated emails, scheduling calendar invites, or updating CRM records).
 *   **The End-to-End Workflow:** 
     1.  **Assign:** User drops a vague goal into the dashboard.
     2.  **Orchestrate:** The framework translates the goal into sub-tasks and assigns them to specialized agents (e.g., Planner, Researcher, Executor).
@@ -41,7 +41,7 @@
 3.  **Strict Human-in-the-Loop (HITL) Halts:** Agents are firewalled from direct external mutation. They must output a serialized `PENDING_APPROVAL` state, halting the backend loop until a human explicitly signs off.
 4.  **Asynchronous Message Brokering:** Heavy LLM reasoning cycles are decoupled from the UI using Azure Service Bus, guaranteeing a snappy React frontend even when background agents debate a task for minutes.
 5.  **Stateful Memory Resumption:** Workflows can be paused for days. The entire agent graph memory is saved securely in a NoSQL database and instantly re-hydrated back into the worker node when the user resumes the task.
-6.  **Standardized Tool Integration via MCP:** Built entirely on the Model Context Protocol (MCP) to supply the agents with dynamically loaded, framework-agnostic tools. This abstracts the underlying logic of APIs and avoids brittle, hardcoded function wrappers.
+6.  **Standardized Tool Integration via MCP:** Built entirely on the Model Context Protocol (MCP) to supply the agents with dynamically loaded, framework-agnostic tools (e.g., Mail Delivery, Calendar Scheduling). This abstracts the underlying logic of APIs and avoids brittle, hardcoded function wrappers.
 
 **User Flow Sequence:**
 
@@ -128,7 +128,7 @@ flowchart TD
     end
     
     subgraph External Periphery
-        TargetAPI[Enterprise Endpoints\nO365 / GitHub / Jira]
+        TargetAPI[Enterprise Endpoints\nO365 Mail & Calendar / GitHub / Jira]
         PublicWeb[Web Search / RAG Sources]
     end
 
@@ -172,7 +172,7 @@ Building a robust, real-world multi-agent system in a hackathon environment requ
 **What We Left Behind (Trade-offs & Constraints):**
 *   **Dropped Real-Time WebSockets:** We wanted a buttery-smooth live-typing animation in the UI via WebSockets. However, distributed state management for WebSockets across workers is complex. We compromised with optimized HTTP polling to ensure stability over flashiness.
 *   **Skipped Custom Model Fine-Tuning:** Training specific SLMs on corporate APIs would have increased accuracy, but time and compute constraints boxed us out. We heavily compensated by leveraging the "Reviewer" agent to dynamically enforce strict Pydantic parsing rules instead.
-*   **Constrained Tool Sandbox:** Rather than giving the agents open-ended access to run arbitrary Python code or touch local file systems, we intentionally sandboxed their tools to a whitelist of pre-defined API wrappers (like Search and Calendar Drafts) to mitigate immediate security risks during the prototype phase.
+*   **Constrained Tool Sandbox:** Rather than giving the agents open-ended access to run arbitrary Python code or touch local file systems, we intentionally sandboxed their tools to a whitelist of pre-defined API wrappers (like Search, Email Automation, and Calendar Scheduling) to mitigate immediate security risks during the prototype phase.
 
 ---
 
@@ -189,7 +189,7 @@ We have successfully transitioned from a conceptual architecture to an end-to-en
 *   **Tiered Model Integrations:** The modular architecture successfully routes requests to different frontier/quantized endpoints based on the assigned agent profile.
 
 **What is Partially Implemented / Known Limitations:**
-*   **Limited "Tool" Ecosystem:** Right now, the Executor agent is only wired to dummy REST endpoints representing a curated set of actions (e.g., Calendar drafting, Web Search). Deep, authenticated integrations via OAuth (like Microsoft Graph API or Atlassian Suite) are mocked for prototype speed.
+*   **Limited "Tool" Ecosystem:** Right now, the Executor agent is only wired to dummy REST endpoints representing a curated set of actions (e.g., Email sending, Calendar scheduling, Web Search). Deep, authenticated integrations via OAuth (like Microsoft Graph API or Atlassian Suite) are mocked for prototype speed.
 *   **Polling Latency:** The React frontend polls Cosmos DB every few seconds for UI telemetry updates. Under heavy load, this could lead to API rate limiting, making it less efficient than a persistent WebSocket connection.
 *   **Static Guardrails:** The Reviewer agent relies heavily on system prompts instead of hardcoded programmatic schema validation. Complex edge cases might still trigger a retry loop if the LLM struggles to parse the payload perfectly.
 
