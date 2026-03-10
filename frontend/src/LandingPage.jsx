@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  ShieldCheck, Activity, CheckCircle2, XCircle, BrainCircuit,
+  Terminal, ShieldAlert, Sparkles, Mail, Lock
+} from 'lucide-react';
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
@@ -112,7 +116,7 @@ const css = `
     display: flex; align-items: center; gap: 80px; padding: 120px 60px; max-width: 1440px; margin: 0 auto;
   }
   .lp-feature-text { flex: 1; }
-  .lp-feature-visual { flex: 1.2; background: var(--bg-secondary); height: 500px; border-radius: 30px; border: 1px solid var(--border); position: relative; overflow: hidden;}
+  .lp-feature-visual { flex: 1.2; background: var(--bg-secondary); height: 500px; border-radius: 30px; border: 1px solid var(--border); position: relative; }
   .lp-feature-label { font-size: 14px; font-weight: 700; color: var(--text-secondary); margin-bottom: 16px; }
   .lp-feature-h2 { font-size: 48px; font-weight: 800; letter-spacing: -2px; margin-bottom: 24px; line-height: 1.1; }
   .lp-feature-p { font-size: 18px; color: var(--text-secondary); line-height: 1.6; }
@@ -141,14 +145,65 @@ const css = `
   .lp-cal-day.active { background: #000; color: #fff; font-weight: 700; position: relative; }
   .lp-cal-badge { position: absolute; top: -30px; right: -50px; background: #fff; border: 1px solid #000; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; color: #000; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 140px; text-align: left; }
 
-  @media (max-width: 1024px) {
-    .lp-nav { padding: 20px 32px; }
-    .lp-section { padding: 60px 24px; }
-    .lp-grid-layout { grid-template-columns: 1fr; }
-    .lp-large-feature { flex-direction: column; gap: 40px; padding: 60px 24px; }
-    .lp-feature-visual { width: 100%; height: 350px; }
     .lp-hero-title { font-size: 60px; }
   }
+
+  /* Mailing Mockup */
+  .lp-mailing {
+    flex: 1.2; background: #fff; border: 1px solid var(--border);
+    border-radius: 24px; padding: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.02);
+    display: flex; flex-direction: column; gap: 20px;
+    position: relative; /* Ensure prompt stays relative to card */
+  }
+  .lp-mail-header { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+  .lp-mail-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .lp-mail-field { display: flex; gap: 12px; font-size: 13px; color: var(--text-secondary); border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+  .lp-mail-label { font-weight: 700; width: 40px; color: #ccc; }
+  .lp-mail-body { font-size: 14px; line-height: 1.6; color: var(--text-secondary); min-height: 100px; }
+  .lp-mail-prompt { 
+    position: absolute; bottom: -15px; right: -30px; background: #000; color: #fff; 
+    padding: 12px 20px; border-radius: 12px; font-size: 12px; font-weight: 600;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    animation: float 3s ease-in-out infinite;
+    z-index: 10; white-space: nowrap;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  /* Governance Mockup */
+  .lp-gov-card {
+    position: absolute; inset: 30px; border: 1px solid var(--border); 
+    border-radius: 20px; background: #fff; padding: 0; overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.03); display: flex; flex-direction: column;
+  }
+  .lp-gov-header {
+    padding: 14px 20px; background: #f8fafc; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .lp-gov-status { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px; }
+  .lp-gov-body { padding: 24px; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+  .lp-gov-thought { padding: 16px; background: #f1f5f9; border-radius: 12px; border-left: 4px solid #94a3b8; }
+  .lp-gov-thought-title { font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 8px; text-transform: uppercase; }
+  .lp-gov-thought-text { font-size: 13px; color: #334155; line-height: 1.5; font-style: italic; }
+  
+  .lp-gov-alert {
+    padding: 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px;
+    display: flex; align-items: center; gap: 12px; color: #991b1b;
+  }
+  .lp-gov-alert-text { font-size: 12px; font-weight: 600; }
+  
+  .lp-gov-actions {
+    margin-top: auto; padding: 20px; border-top: 1px solid var(--border);
+    display: flex; gap: 12px; background: #fff;
+  }
+  .lp-gov-btn {
+    flex: 1; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: 0.2s;
+  }
+  .lp-gov-btn-reject { background: #fff; border: 1px solid #e2e8f0; color: #64748b; }
+  .lp-gov-btn-approve { background: #000; color: #fff; border: none; }
 `;
 
 export default function LandingPage() {
@@ -224,13 +279,67 @@ export default function LandingPage() {
           <button className="lp-btn-black" style={{ marginTop: '32px' }}>Learn more about HITL</button>
         </div>
         <div className="lp-feature-visual">
-          <div style={{ position: 'absolute', inset: '40px', border: '1px solid #e0e0e0', borderRadius: '12px', background: '#fff', padding: '24px' }}>
-            <div style={{ width: '40%', height: '14px', background: '#f0f0f0', borderRadius: '4px', marginBottom: '32px' }} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ width: '100%', height: '10px', background: '#f5f5f5', borderRadius: '4px' }} />
-              <div style={{ width: '90%', height: '10px', background: '#f5f5f5', borderRadius: '4px' }} />
-              <div style={{ width: '95%', height: '10px', background: '#f5f5f5', borderRadius: '4px' }} />
-              <div style={{ width: '30%', height: '24px', background: '#000', borderRadius: '4px', marginTop: '20px' }} />
+          <div className="lp-gov-card">
+            <div className="lp-gov-header">
+              <div className="lp-gov-status">
+                <span style={{ width: 8, height: 8, background: '#10b981', borderRadius: '50%' }} />
+                ORCHESTRATOR ONLINE
+              </div>
+              <Activity size={14} color="#94a3b8" />
+            </div>
+
+            <div className="lp-gov-body">
+              <div className="lp-gov-thought">
+                <div className="lp-gov-thought-title">Agent Reasoning</div>
+                <div className="lp-gov-thought-text">
+                  "I have prepared the project kickoff email. I will now request human authorization before final transmission to ensure the tone matches the client requirements."
+                </div>
+              </div>
+
+              <div className="lp-gov-alert">
+                <ShieldAlert size={18} />
+                <div className="lp-gov-alert-text">APPROVAL: MAIL SERVICE staged.</div>
+              </div>
+
+              <div className="lp-gov-actions">
+                <div className="lp-gov-btn lp-gov-btn-reject"><XCircle size={14} /> Decline</div>
+                <div className="lp-gov-btn lp-gov-btn-approve"><CheckCircle2 size={14} /> Authorize</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="lp-large-feature" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="lp-feature-text">
+          <div className="lp-feature-label">OMNICHANNEL OUTREACH</div>
+          <h2 className="lp-feature-h2">Professional Mailing,<br />Automated.</h2>
+          <p className="lp-feature-p">
+            Draft, refine, and send transactional emails through ORCHESTRAI. Our agents handle the tone, structure, and delivery so you can focus on building relationships.
+          </p>
+          <button className="lp-btn-black" style={{ marginTop: '32px' }}>Explore Mailing →</button>
+        </div>
+        <div className="lp-feature-visual" style={{ background: '#fff', border: 'none' }}>
+          <div className="lp-mailing">
+            <div className="lp-mail-header">
+              <div className="lp-mail-dot" style={{ background: '#ff5f57' }} />
+              <div className="lp-mail-dot" style={{ background: '#febc2e' }} />
+              <div className="lp-mail-dot" style={{ background: '#28c840' }} />
+              <div style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: 600, color: '#ccc' }}>New Message</div>
+            </div>
+            <div className="lp-mail-field">
+              <span className="lp-mail-label">TO</span>
+              <span>xyz@mail.com</span>
+            </div>
+            <div className="lp-mail-field">
+              <span className="lp-mail-label">SUB</span>
+              <span>Project Update & Next Steps</span>
+            </div>
+            <div className="lp-mail-body">
+              Hi team, I’ve completed the initial research on current market trends. Attached is the summary...
+            </div>
+            <div className="lp-mail-prompt">
+              "Draft and send mail to xyz@mail.com"
             </div>
           </div>
         </div>
@@ -266,7 +375,7 @@ export default function LandingPage() {
           <p className="lp-feature-p">
             OrchestrAI agents interpret conversational intent to manage your time. From "Book dinner on Friday" to "Schedule a meeting on the 4th", our agents handle slots, invites, and follow-ups automatically.
           </p>
-          <button className="lp-btn-black" style={{ marginTop: '32px' }}>Connect Cal.com →</button>
+          <button className="lp-btn-black" style={{ marginTop: '32px' }}>Connect Calendar →</button>
         </div>
       </section>
 

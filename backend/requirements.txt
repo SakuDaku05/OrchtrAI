@@ -9,3 +9,4 @@ azure-servicebus
 azure-identity
 duckduckgo-search
 aiohttp
+sib-api-v3-sdk

@@ -1,8 +1,10 @@
-from autogen_core.tools import FunctionTool
-from duckduckgo_search import DDGS
-from pydantic import BaseModel, Field
 import json
 import datetime
+from pydantic import BaseModel, Field
+from autogen_core.tools import FunctionTool
+from duckduckgo_search import DDGS
+# Import the engine logic only when needed to avoid circulars if any
+# from backend.database import db_service
 
 # --- 0. Helper Tools ---
 async def get_current_datetime() -> str:
@@ -81,4 +83,116 @@ async def add_global_event(params: GlobalEventParams) -> str:
     except Exception as e:
         return f"ERROR: Failed to save to global calendar: {str(e)}"
 
+async def delete_global_event(event_id: str, event_type: str = "MEETING") -> str:
+    """
+    Removes an event or reminder from the OrchestrAI Global Calendar.
+    Pass the ID of the event to delete it.
+    """
+    from backend.database import db_service
+    try:
+        await db_service.delete_calendar_event(event_id, event_type)
+        return f"SUCCESS: Event {event_id} deleted from global calendar."
+    except Exception as e:
+        return f"ERROR: Failed to delete event: {str(e)}"
+
 global_calendar_tool = FunctionTool(add_global_event, description="Adds an event or reminder to the shared Global Calendar and Timeline.")
+delete_calendar_tool = FunctionTool(delete_global_event, description="Deletes an event or reminder from the shared Global Calendar using its ID.")
+
+# --- 4. PageIndex Document Retrieval Tools ---
+
+def search_pageindex(query: str, tree: dict) -> list:
+    """Traverse PageIndex tree and find relevant sections."""
+    matches = []
+    
+    def traverse(node):
+        title = node.get("title", "")
+        summary = node.get("summary", "")
+        pages = node.get("page_range", "")
+
+        if query.lower() in title.lower() or query.lower() in summary.lower():
+            matches.append({
+                "title": title,
+                "summary": summary,
+                "pages": pages
+            })
+
+        for child in node.get("children", []):
+            traverse(child)
+
+    if tree:
+        traverse(tree)
+    return matches[:5]
+
+async def query_document_index(query: str, session_id: str) -> str:
+    """
+    Searches the pre-processed PageIndex tree of the uploaded document(s).
+    Use this to find relevant sections and summaries from the context.
+    """
+    from backend.database import db_service
+    
+    state = await db_service.get_state(session_id)
+    if not state or "page_index" not in state:
+        return "No document index found for this session."
+    
+    tree = state["page_index"]
+    results = search_pageindex(query, tree)
+
+    if not results:
+        return "No relevant sections found in the document index."
+
+    context = "### Relevant Document Sections:\n"
+    for r in results:
+        context += f"- **{r['title']}** (Pages: {r['pages']}): {r['summary']}\n"
+
+    return context
+
+
+pageindex_tool = FunctionTool(query_document_index, description="Queries the document's PageIndex for relevant information using a natural language query.")
+
+# --- 5. Email Communication Tools (For Executor) ---
+class EmailParams(BaseModel):
+    recipient: str = Field(..., description="Recipient email address.")
+    subject: str = Field(..., description="Subject of the email.")
+    body: str = Field(..., description="Content of the email (HTML supported).")
+
+async def send_brevo_email(params: EmailParams) -> str:
+    """
+    Sends a transactional email using the Brevo (Sendinblue) API.
+    Use this for notifications, invites, or professional outreach.
+    """
+    import sib_api_v3_sdk
+    from sib_api_v3_sdk.rest import ApiException
+    from backend.config import settings
+
+    if not settings.BREVO_API_KEY:
+        return "ERROR: Brevo API Key not configured in .env."
+
+    # Configure API key authorization: api-key
+    configuration = sib_api_v3_sdk.Configuration()
+    configuration.api_key['api-key'] = settings.BREVO_API_KEY
+
+    # create an instance of the API class
+    api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
+    
+    sender = {"name": settings.BREVO_SENDER_NAME, "email": settings.BREVO_SENDER_EMAIL}
+    to = [{"email": params.recipient}]
+    
+    # Format body with simple HTML wrapper
+    html_content = f"<html><body><div style='font-family: sans-serif; line-height: 1.5;'>{params.body.replace(chr(10), '<br>')}</div></body></html>"
+    
+    send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+        to=to,
+        html_content=html_content,
+        sender=sender,
+        subject=params.subject
+    )
+
+    try:
+        api_response = api_instance.send_transac_email(send_smtp_email)
+        return f"SUCCESS: Email sent via Brevo. Message ID: {api_response.message_id}"
+    except ApiException as e:
+        return f"ERROR: Brevo API Exception: {str(e)}"
+    except Exception as e:
+        return f"ERROR: Unexpected error sending email: {str(e)}"
+
+email_tool = FunctionTool(send_brevo_email, description="Sends a professional email to a recipient using the Brevo API.")

@@ -3,7 +3,8 @@ import {
   Search, ShieldCheck, BrainCircuit, Check, X, Send, Clock,
   FileText, Calendar, TerminalSquare, AlertCircle, ChevronDown,
   MessageSquare, Image as ImageIcon, Code, Sparkles, Plus, Flame, Wind,
-  Paperclip, Mic, Share, User, LayoutDashboard, Database, Settings, Trash2, Info, Link, Music, TrendingUp
+  Paperclip, Mic, Share, User, LayoutDashboard, Database, Settings, Trash2, Info, Link, Music, TrendingUp,
+  Mail, ShieldAlert, XCircle, CheckCircle2
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -567,22 +568,29 @@ const systemCss = `
   }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
   
-  .hitl-header { background: #fffbeb; padding: 12px 16px; border-bottom: 1px solid #fde68a; display: flex; align-items: center; gap: 8px; color: #b45309; font-size: 13px; font-weight: 600; }
-  .hitl-body { padding: 16px; }
-  .hitl-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+  .hitl-header { background: linear-gradient(to right, #fffbeb, #fff7ed); padding: 12px 16px; border-bottom: 1px solid #fde68a; display: flex; align-items: center; gap: 8px; color: #b45309; font-size: 13px; font-weight: 700; }
+  .hitl-body { padding: 16px; background: white; }
+  .hitl-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; }
   
-  .mock-ui { border: 1px solid var(--border-color); border-radius: 6px; background: #f8fafc; font-size: 13px; }
-  .mock-row { padding: 8px 12px; border-bottom: 1px solid var(--border-color); display: flex; gap: 12px; }
-  .mock-label { color: var(--text-tertiary); font-weight: 500; width: 60px; }
-  .mock-val { color: var(--text-primary); font-weight: 500; }
-  .mock-content { padding: 12px; line-height: 1.5; background: white; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px;}
+  .mock-ui { 
+    border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; font-size: 12px; 
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); overflow: hidden;
+  }
+  .mock-row { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; background: #fcfdfe; }
+  .mock-label { color: var(--text-tertiary); font-weight: 700; width: 40px; font-size: 10px; letter-spacing: 0.05em; }
+  .mock-val { color: var(--text-primary); font-weight: 600; }
+  .mock-content { padding: 16px; line-height: 1.6; background: white; min-height: 80px; color: #475569; }
   
-  .hitl-actions { display: flex; gap: 8px; padding: 16px; border-top: 1px solid var(--border-color); background: var(--bg-main); }
-  .btn-action { flex: 1; padding: 8px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid transparent; }
-  .btn-reject { background: white; border-color: var(--border-color); color: var(--text-primary); }
-  .btn-reject:hover { background: #fef2f2; color: var(--danger); border-color: #fecaca; }
-  .btn-approve { background: var(--text-primary); color: white; }
-  .btn-approve:hover { opacity: 0.9; }
+  .hitl-actions { display: flex; gap: 10px; padding: 16px; border-top: 1px solid var(--border-color); background: #f8fafc; }
+  .btn-action { 
+    flex: 1; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; 
+    cursor: pointer; display: flex; align-items: center; justify-content: center; 
+    gap: 8px; border: 1px solid transparent; transition: all 0.2s;
+  }
+  .btn-reject { background: white; border-color: #e2e8f0; color: #64748b; }
+  .btn-reject:hover { background: #fef2f2; color: #ef4444; border-color: #fee2e2; transform: translateY(-1px); }
+  .btn-approve { background: var(--accent-primary); color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); }
+  .btn-approve:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(59, 130, 246, 0.3); opacity: 0.95; }
   /* Styled scrollbars - sidebar and content areas */
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -740,6 +748,20 @@ const systemCss = `
   .calendar-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 15px; color: var(--text-tertiary); font-size: 13px; }
   .loader-ring { width: 30px; height: 30px; border: 2px solid rgba(255,255,255,0.05); border-top-color: var(--accent-primary); border-radius: 50%; animation: spin 1s linear infinite; }
 
+  .event-delete-btn {
+    position: absolute; top: 12px; right: 12px;
+    opacity: 0; transform: scale(0.9);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 6px; border-radius: 8px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 10;
+  }
+  .event-card:hover .event-delete-btn { opacity: 1; transform: scale(1); }
+  .event-delete-btn:hover { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); color: #ef4444; }
+
   @media (max-width: 768px) {
     .calendar-panel { width: calc(100% - 40px); left: 20px; }
   }
@@ -771,6 +793,7 @@ export default function App() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [selectedFilterDate, setSelectedFilterDate] = useState(null);
+  const [hasDocs, setHasDocs] = useState(false);
 
   // Click away for tools dropdown
   useEffect(() => {
@@ -876,6 +899,7 @@ export default function App() {
       setIsProcessing(data.status === 'ACTIVE');
       setApprovalPending(data.status === 'PAUSED_FOR_HITL');
       setWorkflowCompleted(data.status === 'COMPLETED' || data.status === 'FAILED');
+      setHasDocs(data.has_documents || false);
 
       const hasFinalizer = (data.chat_history || []).some(m => m.agent === 'Finalizer');
       const mappedChat = (data.chat_history || [])
@@ -941,6 +965,7 @@ export default function App() {
           const res = await fetch(`http://127.0.0.1:8000/api/workflow/${sessionId}`);
           if (!res.ok) return;
           const data = await res.json();
+          setHasDocs(data.has_documents || false);
 
           // 1. Update Telemetry Logs (Full History)
           const allHistory = data.chat_history || [];
@@ -1104,6 +1129,7 @@ export default function App() {
       });
       const data = await res.json();
       if (res.ok) {
+        setHasDocs(true);
         setChat(prev => prev.map(m => m.content.includes(file.name) ? { ...m, content: `[Uploaded & Indexed: ${file.name} (${data.chunks_processed} pages)]` } : m));
       } else {
         throw new Error(data.detail || data.message || "Upload failed");
@@ -1118,6 +1144,11 @@ export default function App() {
 
   const handleStarterClick = (text) => {
     setInput(text);
+    // Focus and highlight the input row for better UX
+    setTimeout(() => {
+      const inputEl = document.querySelector('.input-field');
+      if (inputEl) inputEl.focus();
+    }, 100);
   };
 
   const startWorkflow = async () => {
@@ -1200,6 +1231,47 @@ export default function App() {
     }
   };
 
+  const handleDeleteEvent = async (eventId) => {
+    if (!window.confirm("Delete this event from the global timeline?")) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/calendar/${eventId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setCalendarEvents(prev => prev.filter(e => e.id !== eventId));
+      }
+    } catch (e) {
+      console.error("Failed to delete event", e);
+    }
+  };
+
+  const handleExport = () => {
+    if (chat.length === 0) return;
+
+    // 1. Try to find the Finalizer's output first
+    const finalizerMsg = [...chat].reverse().find(m => m.agent === 'Finalizer');
+
+    let content = "";
+    let filename = `OrchestrAI_Export_${new Date().toISOString().split('T')[0]}.md`;
+
+    if (finalizerMsg) {
+      content = `# OrchestrAI - Final Report\n\n${finalizerMsg.content}`;
+    } else {
+      content = `# OrchestrAI - Chat History\n\n`;
+      chat.forEach(msg => {
+        content += `**${msg.agent || (msg.role === 'user' ? 'User' : 'Assistant')}**: ${msg.content}\n\n---\n\n`;
+      });
+    }
+
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       <style>{systemCss}</style>
@@ -1252,7 +1324,9 @@ export default function App() {
           <header className="top-header">
             <div className="breadcrumb">Workflows / Active / <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>New Session</span></div>
             <div className="header-actions" style={{ position: 'relative' }}>
-              <button className="btn-share"><Share size={14} /> Share</button>
+              <button className="btn-share" onClick={handleExport} disabled={chat.length === 0}>
+                <Share size={14} /> Share
+              </button>
               <div
                 className={`icon-btn ${showCalendar ? 'active' : ''}`}
                 style={{ background: showCalendar ? 'rgba(59, 130, 246, 0.1)' : '', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
@@ -1310,12 +1384,13 @@ export default function App() {
                 <div className="hero-icon"><BrainCircuit size={24} /></div>
                 <h1 className="hero-title">What workflow do you want to automate?</h1>
 
-                <div className="starters-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                <div className="starters-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
                   {[
-                    { title: 'Meeting Scheduler', desc: 'Agents coordinate to find slots and email invites automatically.', icon: Calendar, color: '#3b82f6' },
-                    { title: 'Information Research', desc: 'Synthesize documentation into a summarized insight.', icon: Search, color: '#8b5cf6' },
+                    { title: 'Meeting Scheduler', desc: 'Agents coordinate to find slots and email invites automatically.', icon: Calendar, color: '#3b82f6', prompt: 'Schedule a meeting for tomorrow at 2 PM to discuss project updates.' },
+                    { title: 'Information Research', desc: 'Synthesize documentation into a summarized insight.', icon: Search, color: '#8b5cf6', prompt: 'Research the latest trends in sustainable energy and summarize them.' },
+                    { title: 'Mailing Agent', desc: 'Draft and send professional emails to any recipient instantly.', icon: Mail, color: '#ec4899', prompt: 'Draft and send mail to xyz@mail.com about the project kickoff.' },
                   ].map((card, i) => (
-                    <div key={i} className="starter-card" onClick={() => handleStarterClick(card.title)}>
+                    <div key={i} className="starter-card" onClick={() => handleStarterClick(card.prompt)}>
                       <div className="sc-icon-wrap" style={{ color: card.color }}>
                         <card.icon size={20} />
                       </div>
@@ -1328,6 +1403,22 @@ export default function App() {
               </div>
             ) : (
               <div className="chat-container">
+                {hasDocs && (
+                  <div className="docs-banner" style={{
+                    background: '#f1f5f9',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '12px',
+                    padding: '10px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    marginBottom: '10px'
+                  }}>
+                    <FileText size={16} color="var(--accent-primary)" />
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Active Document(s) Indexed</span>
+                    <span style={{ fontSize: '11px', background: 'var(--accent-primary)', color: 'white', padding: '2px 6px', borderRadius: '4px' }}>READY</span>
+                  </div>
+                )}
                 {chat.map(msg => (
                   <div key={msg.id} className="message" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
                     <div className={`msg-avatar ${msg.role}`}>
@@ -1432,6 +1523,13 @@ export default function App() {
                           <div className="event-type-badge">{evt.type}</div>
                           <h4 className="event-title">{evt.title}</h4>
                           <p className="event-desc">{evt.description}</p>
+                        </div>
+                        <div
+                          className="event-delete-btn"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteEvent(evt.id); }}
+                          title="Delete Event"
+                        >
+                          <Trash2 size={14} />
                         </div>
                         <div className="event-glow"></div>
                       </div>
@@ -1573,13 +1671,28 @@ export default function App() {
               {/* HITL Card */}
               {approvalPending && (
                 <div className="hitl-card">
-                  <div className="hitl-header"><AlertCircle size={14} /> ACTION REQUIRED</div>
+                  <div className="hitl-header"><ShieldAlert size={14} /> ACTION REQUIRED</div>
                   <div className="hitl-body">
-                    <div className="hitl-desc">Reviewer agent has staged the workflow and is requesting human approval to proceed.</div>
+                    <div className="hitl-desc">The Validator has paused the workflow. A sensitive action (Email/Calendar) is staged for your review.</div>
+
+                    <div className="mock-ui">
+                      <div className="mock-row">
+                        <span className="mock-label">TO:</span>
+                        <span className="mock-val">Target Recipient</span>
+                      </div>
+                      <div className="mock-row">
+                        <span className="mock-label">SUB:</span>
+                        <span className="mock-val">Staged Subject</span>
+                      </div>
+                      <div className="mock-content">
+                        <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '8px' }}>[ Draft Content Payload ]</div>
+                        Review the telemetry logs below to see the exact content prepared by the Executor.
+                      </div>
+                    </div>
                   </div>
                   <div className="hitl-actions">
-                    <button className="btn-action btn-reject" onClick={handleReject}><X size={14} /> Reject</button>
-                    <button className="btn-action btn-approve" onClick={handleApprove}><Check size={14} /> Approve</button>
+                    <button className="btn-action btn-reject" onClick={handleReject}><XCircle size={14} /> Reject</button>
+                    <button className="btn-action btn-approve" onClick={handleApprove}><CheckCircle2 size={14} /> Approve & Send</button>
                   </div>
                 </div>
               )}
